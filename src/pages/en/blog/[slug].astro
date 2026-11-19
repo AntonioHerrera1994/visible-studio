@@ -1,0 +1,12 @@
+---
+import { getCollection } from 'astro:content';
+import View from '../../../views/Blog.astro';
+import { pathsFor } from '../../../lib/content';
+
+export async function getStaticPaths() {
+  return pathsFor(await getCollection('blog'), 'en');
+}
+const { entry } = Astro.props;
+---
+
+<View lang="en" entry={entry} />

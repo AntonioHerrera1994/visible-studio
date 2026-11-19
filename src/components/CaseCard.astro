@@ -1,0 +1,65 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { type Lang, route, t } from '../i18n/ui';
+
+interface Props {
+  entry: CollectionEntry<'cases'>;
+  lang: Lang;
+  size?: 'large' | 'small';
+}
+const { entry, lang, size = 'small' } = Astro.props;
+const d = entry.data;
+const href = `${route(lang, 'work')}${d.slug}/`;
+---
+
+<a class:list={['case', `case--${size}`]} href={href} data-eyes-attract data-tilt>
+  <div class="case__cover" style={`--case-color:${d.color}`} transition:name={`case-${d.key}`}>
+    <span class="case__client">{d.client}</span>
+    {d.placeholder && <span class="example-tag case__tag">{t(lang, 'example')}</span>}
+  </div>
+  <div class="case__body">
+    <h3>{d.title}</h3>
+    <p class="muted">{d.industry}. {d.services.join(', ')}</p>
+  </div>
+</a>
+
+<style>
+  .case { display: flex; flex-direction: column; text-decoration: none; gap: 1rem; }
+  .case h3 { transition: color 0.2s; }
+  .case:hover h3 { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 2px; }
+  .case__cover {
+    position: relative;
+    flex: 1;
+    min-height: 220px;
+    border-radius: var(--radius-card);
+    background: var(--case-color);
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+    transition: transform 0.45s var(--ease-out), border-radius 0.45s var(--ease-out);
+  }
+  /* Brillo que sigue al cursor */
+  .case__cover::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgb(255 255 255 / 0.35), transparent 55%);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .case:hover .case__cover::after { opacity: 1; }
+  .case--large .case__cover { min-height: 420px; }
+  .case__client {
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    font-weight: 800;
+    font-stretch: 75%;
+    letter-spacing: -0.04em;
+    color: #000;
+    mix-blend-mode: multiply;
+  }
+  .case__tag { position: absolute; top: 1rem; left: 1rem; }
+  .case:hover .case__cover { border-radius: 36px; transition-duration: 0.12s, 0.45s; }
+  .case h3 { font-size: var(--step-1); }
+  .case p { font-size: var(--step--1); margin-top: 0.3rem; }
+</style>

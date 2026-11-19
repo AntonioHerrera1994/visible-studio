@@ -1,0 +1,69 @@
+---
+import { type Lang, t } from '../i18n/ui';
+
+interface Props {
+  lang: Lang;
+  items: { q: string; a: string }[];
+  title?: string;
+}
+const { lang, items, title = t(lang, 'faq.title') } = Astro.props;
+const schema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: items.map((i) => ({ '@type': 'Question', name: i.q, acceptedAnswer: { '@type': 'Answer', text: i.a } })),
+};
+---
+
+{items.length > 0 && (
+  <section class="section faq">
+    <div class="wrap faq__grid">
+      <h2 data-reveal="mask">{title}</h2>
+      <div data-stagger>
+        {items.map((item) => (
+          <details data-reveal>
+            <summary>{item.q}</summary>
+            <p class="muted">{item.a}</p>
+          </details>
+        ))}
+      </div>
+    </div>
+    <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+  </section>
+)}
+
+<style>
+  .faq__grid { display: grid; grid-template-columns: 1fr 1.6fr; gap: 3rem; align-items: start; }
+  details { border-bottom: 1px solid var(--line); }
+  details:first-child { border-top: 1px solid var(--line); }
+  summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding-block: 1.3rem;
+    font-size: var(--step-1);
+    font-weight: 650;
+    line-height: 1.3;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::after {
+    content: '+';
+    font-size: 1.6rem;
+    line-height: 1;
+    color: var(--accent);
+    transition: transform 0.3s var(--ease-out);
+  }
+  details[open] summary::after { transform: rotate(45deg); }
+  details p { padding-bottom: 1.4rem; max-width: 62ch; }
+  /* Apertura suave (navegadores que soportan ::details-content) */
+  details::details-content {
+    block-size: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: block-size 0.4s var(--ease-out), opacity 0.3s, content-visibility 0.4s allow-discrete;
+  }
+  details[open]::details-content { block-size: auto; opacity: 1; }
+  summary:hover { color: var(--accent); }
+  @media (max-width: 860px) { .faq__grid { grid-template-columns: 1fr; gap: 1.5rem; } }
+</style>

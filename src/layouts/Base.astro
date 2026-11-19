@@ -1,0 +1,104 @@
+---
+import { ClientRouter } from 'astro:transitions';
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import WhatsAppButton from '../components/WhatsAppButton.astro';
+import { type Lang, t, contact } from '../i18n/ui';
+
+interface Props {
+  lang: Lang;
+  title: string;
+  description: string;
+  /** URL equivalente en el otro idioma, para hreflang y el selector de idioma */
+  alternates: Record<Lang, string>;
+  schema?: Record<string, unknown>[];
+  ogImage?: string;
+}
+
+const { lang, title, description, alternates, schema = [], ogImage = '/og.png' } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const fullTitle = title.includes('Visible Studio') ? title : `${title} | Visible Studio`;
+
+// Datos estructurados base: la agencia como negocio local.
+const org = {
+  '@context': 'https://schema.org',
+  '@type': 'ProfessionalService',
+  '@id': 'https://wearevisiblestudio.com/#org',
+  name: 'Visible Studio',
+  url: 'https://wearevisiblestudio.com/',
+  logo: 'https://wearevisiblestudio.com/favicon.svg',
+  email: contact.email,
+  telephone: contact.phone,
+  address: { '@type': 'PostalAddress', addressLocality: 'Tijuana', addressRegion: 'BC', addressCountry: 'MX' },
+  areaServed: ['MX', 'US'],
+  sameAs: Object.values(contact.social),
+};
+---
+
+<!doctype html>
+<html lang={lang === 'es' ? 'es-MX' : 'en-US'} data-palette="limon">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang="es-MX" href={new URL(alternates.es, Astro.site)} />
+    <link rel="alternate" hreflang="en-US" href={new URL(alternates.en, Astro.site)} />
+    <link rel="alternate" hreflang="x-default" href={new URL(alternates.es, Astro.site)} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#000000" />
+    <!-- Aplica la paleta guardada antes de pintar, para que no parpadee -->
+    <script is:inline>
+      (function () {
+        var p = 'limon';
+        try { p = localStorage.getItem('vs-palette') || p; } catch (e) {}
+        if (['limon', 'jamaica', 'mango'].indexOf(p) < 0) p = 'limon';
+        document.documentElement.dataset.palette = p;
+        document.documentElement.classList.add('js');
+      })();
+    </script>
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Visible Studio" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={new URL(ogImage, Astro.site)} />
+    <meta property="og:locale" content={lang === 'es' ? 'es_MX' : 'en_US'} />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <script type="application/ld+json" set:html={JSON.stringify([org, ...schema])} />
+    <ClientRouter />
+  </head>
+  <body>
+    <a class="skip" href="#main">{t(lang, 'skip')}</a>
+    <Header lang={lang} alternates={alternates} />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer lang={lang} />
+    <WhatsAppButton lang={lang} />
+    <script>
+      import '../scripts/eyes.ts';
+      import '../scripts/palette.ts';
+      import '../scripts/motion.ts';
+    </script>
+  </body>
+</html>
+
+<style>
+  .skip {
+    position: absolute;
+    left: 1rem;
+    top: -4rem;
+    z-index: 100;
+    background: var(--accent);
+    color: var(--on-accent);
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-weight: 650;
+  }
+  .skip:focus { top: 1rem; }
+</style>

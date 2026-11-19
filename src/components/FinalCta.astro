@@ -1,0 +1,46 @@
+---
+import Eyes from './Eyes.astro';
+import { type Lang, route, contact } from '../i18n/ui';
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const copy = {
+  es: {
+    h: '¿Te están viendo tus clientes?',
+    p: 'Te decimos qué tan visible es tu negocio y qué cambiarías primero. El diagnóstico es gratis.',
+    a: 'Agenda tu diagnóstico gratis',
+    b: 'Escríbenos por WhatsApp',
+  },
+  en: {
+    h: 'Are your customers seeing you?',
+    p: 'We tell you how visible your business is and what to change first. The check is free.',
+    a: 'Book your free check',
+    b: 'Message us on WhatsApp',
+  },
+}[lang];
+---
+
+<section class="section section--green final">
+  <div class="wrap final__grid">
+    <div class="final__eyes" data-reveal="scale"><Eyes variant="cta" /></div>
+    <div>
+      <h2 data-reveal="mask">{copy.h}</h2>
+      <p class="lede" data-reveal>{copy.p}</p>
+      <div class="final__actions">
+        <a class="btn btn--dark" href={route(lang, 'audit')} data-eyes-attract data-magnetic>{copy.a}</a>
+        <a class="btn btn--ghost" href={`https://wa.me/${contact.whatsapp}`} rel="noopener" data-eyes-attract>{copy.b}</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .final__grid { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: clamp(2rem, 5vw, 5rem); align-items: center; }
+  .final h2 { margin-bottom: 1.25rem; }
+  .final .lede { margin-bottom: 2rem; }
+  .final__actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+  .final__actions .btn { transition: translate 0.25s var(--ease-out), background-color 0.2s; }
+  @media (max-width: 860px) {
+    .final__grid { grid-template-columns: 1fr; }
+    .final__eyes { width: min(60%, 260px); }
+  }
+</style>

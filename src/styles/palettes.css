@@ -1,0 +1,124 @@
+/*
+  Tres paletas con nombre de agua fresca. Se eligen en el menú (PaletteSwitcher.astro)
+  y se guardan en localStorage. El atributo vive en <html data-palette="…">.
+
+  Tokens:
+    --bg / --fg / --muted / --line / --line-strong / --hover / --field  → base
+    --accent / --accent-hover / --on-accent / --on-accent-muted          → color de marca y secciones de acento
+    --surface / --on-surface / --on-surface-muted / --surface-line / --card / --card-placeholder → secciones claras
+    --ink / --on-ink        → el color más oscuro (botones oscuros, textos sobre acento claro)
+    --focus                 → anillo de foco (siempre con contraste alto)
+    --eye-*                 → los ojos
+*/
+
+/* 1. Agua de Limón — la original: negro profundo y verde Visible */
+:root,
+[data-palette='limon'] {
+  color-scheme: dark;
+  --bg: #000000;
+  --fg: #f6f8f3;
+  --muted: #9aa39c;
+  --line: #1f1f1f;
+  --line-strong: #353535;
+  --hover: #161616;
+  --field: #0d0d0d;
+
+  --accent: #2dc65c;
+  --accent-hover: #3fdb6f;
+  --accent-strong: #12823a;
+  --on-accent: #000000;
+  --on-accent-muted: #134a25;
+
+  --surface: #eef2ec;
+  --on-surface: #000000;
+  --on-surface-muted: #4f5a52;
+  --surface-line: #cfd8cd;
+  --card: #ffffff;
+  --card-placeholder: #d6ddd4;
+
+  --ink: #000000;
+  --on-ink: #f6f8f3;
+  --focus: #3d6bff;
+  --pop-1: #3d6bff;
+  --pop-2: #ffb84d;
+
+  --eye-sclera: #f6f8f3;
+  --eye-iris: #2dc65c;
+  --eye-ink: #000000;
+  --eye-brow: #f6f8f3;
+  --header-bg: rgb(0 0 0 / 0.82);
+}
+
+/* 2. Jamaica — noche color vino con rosa flor de jamaica */
+[data-palette='jamaica'] {
+  color-scheme: dark;
+  --bg: #22030e;
+  --fg: #ffeaf0;
+  --muted: #d59fb0;
+  --line: #3d1324;
+  --line-strong: #5e2439;
+  --hover: #340a1b;
+  --field: #1a020b;
+
+  --accent: #ff3d7f;
+  --accent-hover: #ff6a9c;
+  --accent-strong: #c8155a;
+  --on-accent: #22030e;
+  --on-accent-muted: #5e0a2a;
+
+  --surface: #ffe3ec;
+  --on-surface: #22030e;
+  --on-surface-muted: #7a3550;
+  --surface-line: #f5bfd0;
+  --card: #fff7fa;
+  --card-placeholder: #f7c9d8;
+
+  --ink: #22030e;
+  --on-ink: #ffeaf0;
+  --focus: #ffd23f;
+  --pop-1: #ffd23f;
+  --pop-2: #9b5cff;
+
+  --eye-sclera: #ffeaf0;
+  --eye-iris: #ff3d7f;
+  --eye-ink: #22030e;
+  --eye-brow: #ffeaf0;
+  --header-bg: rgb(34 3 14 / 0.84);
+}
+
+/* 3. Mango con Chile — amarillo mango a pleno sol con picante rojo */
+[data-palette='mango'] {
+  color-scheme: light;
+  --bg: #ffb703;
+  --fg: #1c1000;
+  --muted: #5a3c00;
+  --line: #e6a300;
+  --line-strong: #b37f00;
+  --hover: #ffc533;
+  --field: #ffd15c;
+
+  --accent: #d62a1e;
+  --accent-hover: #ee3a2d;
+  --accent-strong: #b8221a;
+  --on-accent: #fff6df;
+  --on-accent-muted: #ffd2b8;
+
+  --surface: #fff4cf;
+  --on-surface: #1c1000;
+  --on-surface-muted: #6b4b00;
+  --surface-line: #f0d98a;
+  --card: #ffffff;
+  --card-placeholder: #ffe28a;
+
+  --ink: #1c1000;
+  --on-ink: #fff6df;
+  --focus: #1f3bff;
+  --pop-1: #1f8a3a;
+  --pop-2: #1f3bff;
+
+  --eye-sclera: #fffaf0;
+  --eye-iris: #3f9e2c;
+  --eye-ink: #1c1000;
+  --eye-brow: #1c1000;
+  --header-bg: rgb(255 183 3 / 0.86);
+}

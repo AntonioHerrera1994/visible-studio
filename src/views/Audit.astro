@@ -1,0 +1,152 @@
+---
+import Base from '../layouts/Base.astro';
+import PageHero from '../components/PageHero.astro';
+import { type Lang, route } from '../i18n/ui';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+
+const copy = {
+  es: {
+    title: 'Diagnóstico gratis: ¿qué tan visible es tu negocio?',
+    description: 'Responde 6 preguntas y descubre qué tan visible es tu negocio en Google, redes y respuestas de IA.',
+    h1: '¿Qué tan visible es tu negocio?',
+    lede: 'Seis preguntas, un minuto. Al final te decimos qué mejorar primero.',
+    yes: 'Sí', no: 'No', result: 'Tu calificación de visibilidad', again: 'Volver a empezar',
+    cta: 'Quiero mi diagnóstico completo',
+    questions: [
+      'Si buscas tu tipo de negocio y tu ciudad en Google, ¿apareces en la primera página?',
+      '¿Tu ficha de Google Maps tiene fotos, horario y más de 20 reseñas?',
+      '¿Tu sitio web carga rápido y se ve bien en el celular?',
+      '¿Sabes cuántos clientes te llegan cada mes desde internet?',
+      '¿Tu marca se ve igual en tu sitio, tus redes y tu local?',
+      '¿Publicas en redes sociales al menos una vez por semana?',
+    ],
+    tiers: [
+      [0, 2, 'Casi invisible', 'Tus clientes no te están encontrando. Empieza por tu ficha de Google y un sitio que funcione en celular.'],
+      [3, 4, 'Se te ve a ratos', 'Ya tienes bases, pero estás perdiendo clientes frente a la competencia. Toca medir y ordenar tu marca.'],
+      [5, 6, 'Bien visible', 'Vas bien. El siguiente paso es crecer: SEO para IA, campañas y automatizaciones.'],
+    ],
+  },
+  en: {
+    title: 'Free check: how visible is your business?',
+    description: 'Answer 6 questions and find out how visible your business is on Google, social media and AI answers.',
+    h1: 'How visible is your business?',
+    lede: 'Six questions, one minute. At the end we tell you what to improve first.',
+    yes: 'Yes', no: 'No', result: 'Your visibility score', again: 'Start over',
+    cta: 'Get my full check',
+    questions: [
+      'If you search for your type of business and city on Google, do you show up on the first page?',
+      'Does your Google Maps profile have photos, hours and over 20 reviews?',
+      'Does your website load fast and look good on a phone?',
+      'Do you know how many customers come from the internet each month?',
+      'Does your brand look the same on your site, social media and storefront?',
+      'Do you post on social media at least once a week?',
+    ],
+    tiers: [
+      [0, 2, 'Nearly invisible', 'Customers are not finding you. Start with your Google profile and a site that works on phones.'],
+      [3, 4, 'Seen now and then', 'You have the basics, but you are losing customers to competitors. Time to measure and tidy up your brand.'],
+      [5, 6, 'Clearly visible', 'You are doing well. Next step is growth: AI SEO, campaigns and automations.'],
+    ],
+  },
+}[lang];
+---
+
+<Base lang={lang} title={copy.title} description={copy.description} alternates={{ es: '/es/diagnostico/', en: '/en/visibility-check/' }}>
+  <PageHero h1={copy.h1} lede={copy.lede} />
+
+  <section class="section">
+    <div class="wrap quiz" data-quiz data-tiers={JSON.stringify(copy.tiers)} data-contact={route(lang, 'contact')}>
+      <ol class="qs">
+        {copy.questions.map((q, i) => (
+          <li class="q">
+            <fieldset>
+              <legend>{q}</legend>
+              <div class="opts">
+                <label><input type="radio" name={`q${i}`} value="1" /><span>{copy.yes}</span></label>
+                <label><input type="radio" name={`q${i}`} value="0" /><span>{copy.no}</span></label>
+              </div>
+            </fieldset>
+          </li>
+        ))}
+      </ol>
+
+      <div class="result" data-result hidden>
+        <p class="muted">{copy.result}</p>
+        <p class="result__score"><span data-score>0</span>/6</p>
+        <h2 data-tier></h2>
+        <p class="lede" data-tier-text></p>
+        <div class="result__actions">
+          <a class="btn btn--primary" data-cta href={route(lang, 'contact')} data-eyes-attract>{copy.cta}</a>
+          <button class="btn btn--ghost" type="button" data-reset>{copy.again}</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<script>
+  function initQuiz() {
+    const root = document.querySelector<HTMLElement>('[data-quiz]');
+    if (!root || root.dataset.ready) return;
+    root.dataset.ready = '1';
+    const tiers = JSON.parse(root.dataset.tiers!) as [number, number, string, string][];
+    const total = root.querySelectorAll('fieldset').length;
+    const result = root.querySelector<HTMLElement>('[data-result]')!;
+
+    root.addEventListener('change', () => {
+      const answered = root.querySelectorAll<HTMLInputElement>('input:checked');
+      if (answered.length < total) return;
+      const score = [...answered].reduce((sum, i) => sum + Number(i.value), 0);
+      const tier = tiers.find(([min, max]) => score >= min && score <= max)!;
+      root.querySelector('[data-score]')!.textContent = String(score);
+      root.querySelector('[data-tier]')!.textContent = tier[2];
+      root.querySelector('[data-tier-text]')!.textContent = tier[3];
+      root.querySelector<HTMLAnchorElement>('[data-cta]')!.href = `${root.dataset.contact}?score=${score}`;
+      result.hidden = false;
+      result.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    root.querySelector('[data-reset]')!.addEventListener('click', () => {
+      root.querySelectorAll<HTMLInputElement>('input').forEach((i) => (i.checked = false));
+      result.hidden = true;
+      root.scrollIntoView({ behavior: 'smooth' });
+    });
+  }
+  document.addEventListener('astro:page-load', initQuiz);
+</script>
+
+<style>
+  .quiz { max-width: 860px; }
+  .qs { list-style: none; counter-reset: q; margin: 0; padding: 0; display: grid; gap: 1rem; }
+  .q { counter-increment: q; }
+  .q fieldset {
+    border: 1.5px solid var(--line); border-radius: var(--radius-card); margin: 0;
+    padding: 1.5rem 1.5rem 1.5rem 4.5rem; position: relative;
+  }
+  .q fieldset::before {
+    content: counter(q); position: absolute; left: 1.5rem; top: 1.3rem;
+    font-size: 2rem; font-weight: 800; font-stretch: 75%; color: var(--accent);
+  }
+  .q fieldset:has(input:checked) { border-color: var(--accent); }
+  legend { float: left; width: 100%; font-size: var(--step-1); font-weight: 650; line-height: 1.3; margin-bottom: 1rem; }
+  .opts { clear: both; display: flex; gap: 0.5rem; }
+  .opts input { position: absolute; opacity: 0; }
+  .opts span {
+    display: inline-block; padding: 0.6rem 1.4rem; border-radius: var(--radius-pill);
+    border: 1.5px solid var(--line-strong); cursor: pointer; font-weight: 600;
+  }
+  .opts input:checked + span { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .opts input:focus-visible + span { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .result {
+    margin-top: 3rem; padding: clamp(1.75rem, 4vw, 3rem); border-radius: var(--radius-card);
+    background: var(--accent); color: var(--on-accent); display: grid; gap: 1rem;
+  }
+  .result .muted { color: var(--on-accent-muted); }
+  .result__score { font-size: clamp(4rem, 12vw, 8rem); font-weight: 800; font-stretch: 75%; line-height: 0.9; }
+  .result__actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.5rem; }
+  .result .btn--primary { background: var(--ink); color: var(--on-ink); }
+  @media (max-width: 560px) {
+    .q fieldset { padding: 1.25rem; }
+    .q fieldset::before { position: static; display: block; margin-bottom: 0.25rem; }
+  }
+</style>

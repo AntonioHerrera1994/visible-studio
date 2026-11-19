@@ -1,0 +1,19 @@
+---
+import Base from '../layouts/Base.astro';
+import Eyes from '../components/Eyes.astro';
+---
+
+<Base lang="es" title="Página no encontrada" description="Esta página no existe." alternates={{ es: '/es/', en: '/en/' }}>
+  <section class="nf wrap">
+    <div class="nf__eyes"><Eyes variant="hero" /></div>
+    <h1>Buscamos por todos lados y esta página no aparece.</h1>
+    <p class="lede muted">Puede que el enlace haya cambiado con el nuevo sitio.</p>
+    <a class="btn btn--primary" href="/es/" data-eyes-attract>Ir al inicio</a>
+  </section>
+</Base>
+
+<style>
+  .nf { padding-block: var(--space-l); display: grid; gap: 1.5rem; justify-items: start; }
+  .nf__eyes { width: min(320px, 70%); }
+  .nf h1 { font-size: var(--step-3); max-width: 18ch; }
+</style>

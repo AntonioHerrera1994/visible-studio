@@ -1,0 +1,155 @@
+---
+import Base from '../layouts/Base.astro';
+import PageHero from '../components/PageHero.astro';
+import { type Lang, contact } from '../i18n/ui';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+// Define PUBLIC_FORM_ENDPOINT en .env (Formspree, webhook de GoHighLevel, etc.)
+const endpoint = import.meta.env.PUBLIC_FORM_ENDPOINT ?? '';
+
+const copy = {
+  es: {
+    title: 'Contacto', description: 'Escríbenos para empezar tu proyecto de diseño, web, SEO o marketing digital. Respondemos en menos de una semana.',
+    h1: 'Cuéntanos de tu negocio', lede: 'Te respondemos en menos de una semana. Si es urgente, escríbenos por WhatsApp.',
+    name: 'Nombre', email: 'Correo', phone: 'WhatsApp o teléfono', need: '¿Qué necesitas?',
+    needs: ['Branding', 'Sitio web', 'SEO', 'Marketing digital', 'No estoy seguro'],
+    msg: 'Cuéntanos qué quieres lograr', send: 'Enviar mensaje', sending: 'Enviando…',
+    ok: 'Mensaje enviado. Te escribimos en menos de una semana.',
+    err: 'No se pudo enviar. Revisa tu conexión o escríbenos por WhatsApp.',
+    noEndpoint: 'Falta configurar PUBLIC_FORM_ENDPOINT en el archivo .env.',
+    other: 'Otras formas de contactarnos', required: 'obligatorio',
+  },
+  en: {
+    title: 'Contact', description: 'Reach out to start your design, web, SEO or digital marketing project. We reply within a week.',
+    h1: 'Tell us about your business', lede: 'We reply within a week. If it is urgent, message us on WhatsApp.',
+    name: 'Name', email: 'Email', phone: 'WhatsApp or phone', need: 'What do you need?',
+    needs: ['Branding', 'Website', 'SEO', 'Digital marketing', 'Not sure yet'],
+    msg: 'Tell us what you want to achieve', send: 'Send message', sending: 'Sending…',
+    ok: 'Message sent. We will write back within a week.',
+    err: 'The message could not be sent. Check your connection or message us on WhatsApp.',
+    noEndpoint: 'PUBLIC_FORM_ENDPOINT is missing in the .env file.',
+    other: 'Other ways to reach us', required: 'required',
+  },
+}[lang];
+---
+
+<Base lang={lang} title={copy.title} description={copy.description} alternates={{ es: '/es/contacto/', en: '/en/contact/' }}>
+  <PageHero h1={copy.h1} lede={copy.lede} />
+
+  <section class="section">
+    <div class="wrap contact">
+      <form class="form" method="POST" action={endpoint} data-form
+        data-msg-ok={copy.ok} data-msg-err={copy.err} data-msg-sending={copy.sending} data-msg-noendpoint={copy.noEndpoint}>
+        <div class="row">
+          <label>
+            <span>{copy.name} <small class="muted">({copy.required})</small></span>
+            <input name="name" autocomplete="name" required />
+          </label>
+          <label>
+            <span>{copy.email} <small class="muted">({copy.required})</small></span>
+            <input name="email" type="email" autocomplete="email" required />
+          </label>
+        </div>
+        <label>
+          <span>{copy.phone}</span>
+          <input name="phone" type="tel" autocomplete="tel" />
+        </label>
+        <fieldset>
+          <legend>{copy.need}</legend>
+          <div class="chips">
+            {copy.needs.map((n) => (
+              <label class="chip"><input type="checkbox" name="need" value={n} /><span>{n}</span></label>
+            ))}
+          </div>
+        </fieldset>
+        <label>
+          <span>{copy.msg}</span>
+          <textarea name="message" rows="5"></textarea>
+        </label>
+        <input type="hidden" name="score" data-score />
+        <button class="btn btn--primary" type="submit" data-eyes-attract>{copy.send}</button>
+        <p class="status" role="status" aria-live="polite" data-status></p>
+      </form>
+
+      <aside class="aside">
+        <h2>{copy.other}</h2>
+        <ul>
+          <li><a href={`https://wa.me/${contact.whatsapp}`} rel="noopener">WhatsApp</a></li>
+          <li><a href={`mailto:${contact.email}`}>{contact.email}</a></li>
+          <li><a href={`tel:${contact.phone.replace(/\s/g, '')}`}>{contact.phone}</a></li>
+          <li class="muted">{contact.city}</li>
+        </ul>
+      </aside>
+    </div>
+  </section>
+</Base>
+
+<script>
+  function initForm() {
+    const form = document.querySelector<HTMLFormElement>('[data-form]');
+    if (!form || form.dataset.ready) return;
+    form.dataset.ready = '1';
+    // Si viene del diagnóstico, guarda la calificación.
+    const score = new URLSearchParams(location.search).get('score');
+    const scoreInput = form.querySelector<HTMLInputElement>('[data-score]');
+    if (score && scoreInput) scoreInput.value = score;
+
+    const status = form.querySelector<HTMLElement>('[data-status]')!;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!form.action || form.getAttribute('action') === '') {
+        status.textContent = form.dataset.msgNoendpoint!;
+        return;
+      }
+      const btn = form.querySelector<HTMLButtonElement>('button[type=submit]')!;
+      const label = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = form.dataset.msgSending!;
+      try {
+        const res = await fetch(form.action, { method: 'POST', body: new FormData(form), headers: { Accept: 'application/json' } });
+        if (!res.ok) throw new Error(String(res.status));
+        form.reset();
+        status.textContent = form.dataset.msgOk!;
+      } catch {
+        status.textContent = form.dataset.msgErr!;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = label;
+      }
+    });
+  }
+  document.addEventListener('astro:page-load', initForm);
+</script>
+
+<style>
+  .contact { display: grid; grid-template-columns: 1.6fr 1fr; gap: clamp(2rem, 6vw, 6rem); }
+  .form { display: grid; gap: 1.4rem; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4rem; }
+  label > span, legend { display: block; font-weight: 600; margin-bottom: 0.5rem; }
+  input:not([type=checkbox]), textarea {
+    width: 100%;
+    font: inherit;
+    color: var(--fg);
+    background: var(--field);
+    border: 1.5px solid var(--line-strong);
+    border-radius: 14px;
+    padding: 0.9rem 1rem;
+  }
+  input:focus-visible, textarea:focus-visible { border-color: var(--accent); outline-offset: 1px; }
+  fieldset { border: 0; padding: 0; margin: 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .chip input { position: absolute; opacity: 0; }
+  .chip span {
+    display: inline-block; padding: 0.6rem 1rem; border-radius: var(--radius-pill);
+    border: 1.5px solid var(--line-strong); cursor: pointer; font-weight: 550;
+  }
+  .chip input:checked + span { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .chip input:focus-visible + span { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .form .btn { justify-self: start; }
+  .status { min-height: 1.6em; font-weight: 600; }
+  .aside h2 { font-size: var(--step-1); margin-bottom: 1rem; }
+  .aside ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.7rem; font-size: var(--step-1); }
+  .aside a { text-decoration-thickness: 2px; text-underline-offset: 4px; }
+  @media (max-width: 860px) { .contact, .row { grid-template-columns: 1fr; } }
+</style>

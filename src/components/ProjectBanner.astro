@@ -1,0 +1,233 @@
+---
+/**
+ * Banner de un proyecto dentro de un marco de navegador.
+ *  1. Si hay captura alta (<slug>-full.webp): al pasar el cursor, la página se recorre sola.
+ *  2. Si hay captura normal (<slug>.webp): acercamiento lento al pasar el cursor.
+ *  3. Si no hay captura: banner dinámico que dibuja una mini versión del sitio
+ *     con el nombre, dominio, industria y tecnologías del proyecto.
+ *  4. Imagen de VikingDev solo si USE_API_IMAGE_FALLBACK = true (último recurso).
+ */
+import type { CollectionEntry } from 'astro:content';
+import { industries } from '../lib/projects.config';
+import type { Lang } from '../i18n/ui';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+  lang: Lang;
+  eager?: boolean;
+  size?: 'card' | 'hero';
+}
+const { project, lang, eager = false, size = 'card' } = Astro.props;
+const p = project.data;
+const hue = industries[p.industry]?.hue ?? 140;
+const img = p.shotFull ?? p.shot ?? p.fallbackImage;
+const mode = p.shotFull ? 'scroll' : img ? 'still' : 'generated';
+const industryLabel = industries[p.industry]?.[lang] ?? p.industry;
+// Variación estable por proyecto para que cada banner generado se vea distinto
+const seed = [...p.slug].reduce((a, c) => a + c.charCodeAt(0), 0);
+const layout = seed % 3;
+---
+
+<div class:list={['pb', `pb--${size}`, `pb--${mode}`]} style={`--h:${hue}; --seed:${seed % 7}`} transition:name={`project-${p.slug}`}>
+  <div class="pb__bar" aria-hidden="true">
+    <span class="pb__dots"><i></i><i></i><i></i></span>
+    <span class="pb__url">{p.domain}</span>
+  </div>
+  <div class="pb__view">
+    {img ? (
+      <img
+        src={img}
+        alt={lang === 'es' ? `Captura del sitio de ${p.title}` : `Screenshot of the ${p.title} website`}
+        loading={eager ? 'eager' : 'lazy'}
+        decoding="async"
+        width="1280"
+        height={p.shotFull ? 2400 : 800}
+      />
+    ) : (
+      <div class:list={['gen', `gen--l${layout}`]} role="img" aria-label={`${p.title}: ${industryLabel}`}>
+        <span class="gen__blob gen__blob--a"></span>
+        <span class="gen__blob gen__blob--b"></span>
+        <span class="gen__grain"></span>
+        <div class="gen__site" aria-hidden="true">
+          <div class="gen__nav"><b>{p.title}</b><span></span><span></span><span></span><em></em></div>
+          <div class="gen__hero">
+            <p class="gen__kicker">{industryLabel}</p>
+            <p class="gen__title">{p.title}</p>
+            <span class="gen__line"></span>
+            <span class="gen__line gen__line--short"></span>
+            <span class="gen__cta"></span>
+          </div>
+          <div class="gen__media"><span></span></div>
+          <div class="gen__chips">
+            {(p.stack.length ? p.stack : [p.domain]).slice(0, 3).map((s) => <span>{s}</span>)}
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+</div>
+
+<style>
+  .pb {
+    --frame: color-mix(in srgb, var(--fg) 8%, var(--bg));
+    border-radius: 18px;
+    overflow: hidden;
+    background: var(--frame);
+    border: 1px solid var(--line-strong);
+    box-shadow: 0 24px 60px -30px rgb(0 0 0 / 0.55);
+    transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+    transition: transform 0.5s var(--ease-out), border-radius 0.4s var(--ease-out);
+  }
+  .pb__bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 0.8rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .pb__dots { display: flex; gap: 5px; }
+  .pb__dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--line-strong); }
+  .pb__dots i:first-child { background: #ff5f57; }
+  .pb__dots i:nth-child(2) { background: #febc2e; }
+  .pb__dots i:nth-child(3) { background: #28c840; }
+  .pb__url {
+    flex: 1;
+    max-width: 60%;
+    margin-inline: auto;
+    padding: 0.2rem 0.75rem;
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, var(--fg) 6%, var(--bg));
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pb__view { position: relative; aspect-ratio: 16 / 10; overflow: hidden; background: #fff; }
+  .pb--hero .pb__view { aspect-ratio: 16 / 9.5; }
+  .pb__view img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 0%; display: block; }
+
+  /* Captura alta: se recorre la página */
+  .pb--scroll .pb__view img { transition: object-position 7s cubic-bezier(0.45, 0, 0.55, 1); }
+  :global(a:hover) > .pb--scroll .pb__view img,
+  .pb--scroll:hover .pb__view img,
+  :global(a:focus-visible) > .pb--scroll .pb__view img { object-position: 50% 100%; }
+  /* Captura normal: acercamiento lento */
+  .pb--still .pb__view img { transition: transform 1.2s var(--ease-out); }
+  :global(a:hover) > .pb--still .pb__view img,
+  .pb--still:hover .pb__view img { transform: scale(1.05); }
+
+  /* ---------- Banner generado ---------- */
+  .gen {
+    --c1: hsl(var(--h) 85% 58%);
+    --c2: hsl(calc(var(--h) + 40) 80% 62%);
+    --c3: hsl(calc(var(--h) - 30) 70% 16%);
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background: var(--c3);
+    container-type: inline-size;
+  }
+  .gen__blob {
+    position: absolute;
+    width: 70%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    filter: blur(40px);
+    opacity: 0.75;
+    animation: drift 14s ease-in-out infinite alternate;
+  }
+  .gen__blob--a { background: var(--c1); top: -35%; left: -15%; }
+  .gen__blob--b { background: var(--c2); bottom: -45%; right: -20%; animation-delay: -6s; animation-duration: 18s; }
+  @keyframes drift {
+    from { translate: 0 0; scale: 1; }
+    to { translate: 18% 12%; scale: 1.15; }
+  }
+  .gen__grain {
+    position: absolute;
+    inset: 0;
+    opacity: 0.18;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Mini sitio flotando dentro del banner */
+  .gen__site {
+    position: absolute;
+    inset: 9% 8% -6% 8%;
+    border-radius: 12px 12px 0 0;
+    background: rgb(255 255 255 / 0.92);
+    color: hsl(var(--h) 40% 14%);
+    padding: 4cqi 5cqi;
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    grid-template-rows: auto 1fr auto;
+    gap: 3cqi 4cqi;
+    box-shadow: 0 30px 60px -20px rgb(0 0 0 / 0.45);
+    translate: 0 4%;
+    transition: translate 0.8s var(--ease-out);
+  }
+  :global(a:hover) > .pb .gen__site,
+  .pb:hover .gen__site { translate: 0 0; }
+  .gen__nav { grid-column: 1 / -1; display: flex; align-items: center; gap: 2cqi; }
+  .gen__nav b { font-size: 3cqi; font-weight: 800; margin-right: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45%; }
+  .gen__nav span { width: 6cqi; height: 1.1cqi; border-radius: 1cqi; background: hsl(var(--h) 20% 80%); }
+  .gen__nav em { width: 11cqi; height: 3.6cqi; border-radius: 3cqi; background: var(--c1); }
+  .gen__hero { display: grid; align-content: center; gap: 1.6cqi; }
+  .gen__kicker { font-size: 2.2cqi; font-weight: 700; color: hsl(var(--h) 60% 40%); }
+  .gen__title {
+    font-size: clamp(14px, 6.4cqi, 44px);
+    font-weight: 800;
+    font-stretch: 78%;
+    letter-spacing: -0.03em;
+    line-height: 0.95;
+    text-wrap: balance;
+  }
+  .gen__line { height: 1.3cqi; width: 90%; border-radius: 1cqi; background: hsl(var(--h) 15% 82%); }
+  .gen__line--short { width: 60%; }
+  .gen__cta {
+    width: 16cqi;
+    height: 4.4cqi;
+    border-radius: 3cqi;
+    background: hsl(var(--h) 40% 14%);
+    margin-top: 1cqi;
+    transition: width 0.6s var(--ease-spring);
+  }
+  :global(a:hover) > .pb .gen__cta,
+  .pb:hover .gen__cta { width: 22cqi; background: var(--c1); }
+  .gen__media {
+    position: relative;
+    border-radius: 2cqi;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--c1), var(--c2));
+  }
+  .gen__media span {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 30% 30%, rgb(255 255 255 / 0.6), transparent 40%);
+    animation: shine 6s ease-in-out infinite alternate;
+  }
+  @keyframes shine { to { translate: 40% 30%; } }
+  .gen__chips { grid-column: 1 / -1; display: flex; gap: 1.4cqi; flex-wrap: wrap; }
+  .gen__chips span {
+    font-size: 2cqi;
+    font-weight: 700;
+    padding: 0.6cqi 1.8cqi;
+    border-radius: 3cqi;
+    background: hsl(var(--h) 60% 94%);
+    color: hsl(var(--h) 50% 30%);
+  }
+
+  /* Tres composiciones distintas según el proyecto */
+  .gen--l1 .gen__site { grid-template-columns: 1fr; text-align: center; }
+  .gen--l1 .gen__hero { justify-items: center; }
+  .gen--l1 .gen__media { min-height: 18cqi; }
+  .gen--l1 .gen__chips { justify-content: center; }
+  .gen--l2 .gen__site { grid-template-columns: 1fr 1.2fr; }
+  .gen--l2 .gen__media { order: -1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .gen__blob, .gen__media span { animation: none; }
+  }
+</style>

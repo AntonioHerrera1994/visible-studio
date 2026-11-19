@@ -1,0 +1,25 @@
+---
+import Base from '../layouts/Base.astro';
+import { type Lang } from '../i18n/ui';
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const es = lang === 'es';
+---
+
+<Base
+  lang={lang}
+  title={es ? 'Aviso de privacidad' : 'Privacy policy'}
+  description={es ? 'Aviso de privacidad de Visible Studio.' : 'Visible Studio privacy policy.'}
+  alternates={{ es: '/es/aviso-privacidad/', en: '/en/privacy-policy/' }}
+>
+  <div class="wrap prose legal">
+    <h1>{es ? 'Aviso de privacidad' : 'Privacy policy'}</h1>
+    <!-- TODO: copiar aquí el aviso de privacidad, términos y política de cookies del sitio actual. -->
+    <p>{es ? 'Pega aquí el texto legal actual del sitio.' : 'Paste the current legal text here.'}</p>
+  </div>
+</Base>
+
+<style>
+  .legal { padding-block: var(--space-l); }
+  .legal h1 { font-size: var(--step-3); }
+</style>

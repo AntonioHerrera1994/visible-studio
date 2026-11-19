@@ -1,0 +1,119 @@
+---
+/**
+ * Los ojos de Visible Studio.
+ * - Siguen el cursor (o el dedo) en toda la página.
+ * - Miran y se emocionan (pupila dilatada, cejas arriba) con cualquier elemento [data-eyes-attract].
+ * - Leen lo que escribes en los formularios.
+ * - Parpadean solos y, si nadie se mueve, curiosean alrededor.
+ * La lógica vive en src/scripts/eyes.ts y funciona con cualquier número de pares en la página.
+ */
+interface Props {
+  variant?: 'hero' | 'mini' | 'cta';
+  label?: string;
+  class?: string;
+}
+const { variant = 'hero', label, class: className } = Astro.props;
+const uid = `eyes-${Math.random().toString(36).slice(2, 8)}`;
+const withBrows = variant !== 'mini';
+---
+
+<svg
+  class:list={['eyes', `eyes--${variant}`, className]}
+  viewBox="0 0 520 300"
+  data-eyes
+  role={label ? 'img' : undefined}
+  aria-label={label}
+  aria-hidden={label ? undefined : 'true'}
+  focusable="false"
+>
+  <defs>
+    <clipPath id={`${uid}-l`}>
+      <path d="M22 168 C 58 86, 196 80, 244 164 C 202 248, 64 252, 22 168 Z" />
+    </clipPath>
+    <clipPath id={`${uid}-r`}>
+      <path d="M276 166 C 322 84, 458 90, 498 166 C 454 246, 318 254, 276 166 Z" />
+    </clipPath>
+  </defs>
+
+  {withBrows && (
+    <g class="brows">
+      <path class="brow" d="M60 70 C 104 42, 170 40, 214 62" />
+      <path class="brow" d="M308 60 C 352 38, 418 44, 462 72" />
+    </g>
+  )}
+
+  <g class="eye" data-eye>
+    <g class="eye__lid">
+      <g clip-path={`url(#${uid}-l)`}>
+        <rect class="eye__sclera" x="0" y="60" width="270" height="220" />
+        <g class="eye__iris" data-iris data-cx="133" data-cy="166">
+          <circle class="eye__ring" cx="133" cy="166" r="50" />
+          <circle class="eye__pupil" cx="133" cy="166" r="25" />
+          <circle class="eye__shine" cx="119" cy="150" r="8" />
+        </g>
+      </g>
+      <path class="eye__outline" d="M22 168 C 58 86, 196 80, 244 164 C 202 248, 64 252, 22 168 Z" />
+    </g>
+  </g>
+
+  <g class="eye" data-eye>
+    <g class="eye__lid">
+      <g clip-path={`url(#${uid}-r)`}>
+        <rect class="eye__sclera" x="260" y="60" width="270" height="220" />
+        <g class="eye__iris" data-iris data-cx="387" data-cy="166">
+          <circle class="eye__ring" cx="387" cy="166" r="50" />
+          <circle class="eye__pupil" cx="387" cy="166" r="25" />
+          <circle class="eye__shine" cx="373" cy="150" r="8" />
+        </g>
+      </g>
+      <path class="eye__outline" d="M276 166 C 322 84, 458 90, 498 166 C 454 246, 318 254, 276 166 Z" />
+    </g>
+  </g>
+</svg>
+
+<style>
+  .eyes {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+      }
+
+  .eye__sclera { fill: var(--eye-sclera); transition: fill 0.4s; }
+  .eye__ring { fill: var(--eye-iris); stroke: var(--eye-ink); stroke-width: 5; }
+  .eye__pupil {
+    fill: var(--eye-ink);
+    transform-box: fill-box;
+    transform-origin: center;
+    transition: transform 0.35s var(--ease-out);
+  }
+  .eye__shine { fill: #fff; }
+  .eye__outline {
+    fill: none;
+    stroke: var(--eye-ink);
+    stroke-width: 9;
+    stroke-linejoin: round;
+  }
+  .eyes--mini .eye__outline { stroke-width: 14; }
+
+  .eye__lid {
+    transform-box: fill-box;
+    transform-origin: 50% 55%;
+    transition: transform 0.09s ease-in;
+  }
+  .brow {
+    fill: none;
+    stroke: var(--eye-brow);
+    stroke-width: 12;
+    stroke-linecap: round;
+    transition: transform 0.35s var(--ease-out);
+  }
+
+  /* Estados (los pone eyes.ts) */
+  :global(.eyes.is-blinking) .eye__lid { transform: scaleY(0.06); }
+  :global(.eyes.is-excited) .eye__pupil { transform: scale(1.38); }
+  :global(.eyes.is-excited) .brow { transform: translateY(-14px); }
+  :global(.eyes.is-reading) .eye__lid { transform: scaleY(0.72); }
+  :global(.eyes.is-reading) .brow { transform: translateY(10px); }
+  :global(.eyes.is-surprised) .eye__pupil { transform: scale(0.7); }
+  :global(.eyes.is-surprised) .brow { transform: translateY(-22px); }
+</style>

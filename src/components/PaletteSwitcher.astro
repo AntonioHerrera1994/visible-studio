@@ -1,0 +1,152 @@
+---
+/**
+ * Selector de paleta. Dos formatos:
+ * - "popover": botón con 3 puntos de color que abre un panel anclado (escritorio).
+ * - "inline": fila de 3 opciones (menú móvil).
+ * La lógica está en src/scripts/palette.ts.
+ */
+import { palettes } from '../i18n/palettes';
+import type { Lang } from '../i18n/ui';
+
+interface Props { lang: Lang; variant?: 'popover' | 'inline' }
+const { lang, variant = 'popover' } = Astro.props;
+const label = lang === 'es' ? 'Elige la paleta de color' : 'Pick a color palette';
+const title = lang === 'es' ? 'Sabor del sitio' : 'Site flavor';
+const id = `palette-${variant}`;
+---
+
+{variant === 'popover' ? (
+  <div class="ps">
+    <button class="ps__trigger" popovertarget={id} aria-label={label} data-palette-trigger>
+      <span class="ps__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+    </button>
+    <div id={id} popover class="ps__panel" data-palette-panel>
+      <p class="ps__title">{title}</p>
+      <ul class="ps__list" role="radiogroup" aria-label={label}>
+        {palettes.map((p) => (
+          <li>
+            <button class="ps__opt" role="radio" aria-checked="false" data-palette-option={p.id}>
+              <span class="ps__sw" aria-hidden="true">
+                {p.swatch.map((c) => <span style={`background:${c}`}></span>)}
+              </span>
+              <span class="ps__text">
+                <strong>{p.name[lang]}</strong>
+                <small>{p.note[lang]}</small>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+) : (
+  <div class="psi">
+    <p class="psi__title">{title}</p>
+    <div class="psi__row" role="radiogroup" aria-label={label}>
+      {palettes.map((p) => (
+        <button class="psi__opt" role="radio" aria-checked="false" data-palette-option={p.id}>
+          <span class="ps__sw" aria-hidden="true">
+            {p.swatch.map((c) => <span style={`background:${c}`}></span>)}
+          </span>
+          <span>{p.name[lang]}</span>
+        </button>
+      ))}
+    </div>
+  </div>
+)}
+
+<style>
+  .ps__trigger {
+    anchor-name: --palette;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 50%;
+    border: 1.5px solid var(--line-strong);
+    background: transparent;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: border-color 0.2s, transform 0.3s var(--ease-spring);
+  }
+  .ps__trigger:hover { border-color: var(--fg); transform: rotate(-20deg); }
+  .ps__dots { display: grid; grid-template-columns: repeat(3, 7px); gap: 3px; }
+  .ps__dots i { width: 7px; height: 7px; border-radius: 50%; }
+  .ps__dots i:nth-child(1) { background: var(--fg); }
+  .ps__dots i:nth-child(2) { background: var(--accent); }
+  .ps__dots i:nth-child(3) { background: var(--surface); outline: 1px solid var(--line-strong); }
+
+  .ps__panel {
+    position-anchor: --palette;
+    position-area: bottom span-left;
+    position-try-fallbacks: flip-inline;
+    margin: 0.75rem 0 0;
+    inset: auto;
+    width: min(320px, calc(100vw - 2rem));
+    padding: 1rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 20px;
+    background: var(--bg);
+    color: var(--fg);
+    box-shadow: 0 24px 60px -20px rgb(0 0 0 / 0.5);
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+    transform-origin: top right;
+    transition: opacity 0.2s, transform 0.25s var(--ease-out), display 0.25s allow-discrete, overlay 0.25s allow-discrete;
+  }
+  .ps__panel:popover-open { opacity: 1; transform: none; }
+  @starting-style { .ps__panel:popover-open { opacity: 0; transform: translateY(-6px) scale(0.98); } }
+
+  .ps__title, .psi__title { font-size: var(--step--1); color: var(--muted); font-weight: 600; margin: 0 0 0.6rem 0.25rem; }
+  .ps__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.25rem; }
+  .ps__opt {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.6rem;
+    border-radius: 14px;
+    border: 1.5px solid transparent;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .ps__opt:hover { background: var(--hover); }
+  .ps__opt[aria-checked='true'] { border-color: var(--accent); }
+  .ps__text { display: grid; line-height: 1.25; }
+  .ps__text small { color: var(--muted); font-size: var(--step--1); }
+
+  .ps__sw {
+    display: flex;
+    flex: none;
+    border-radius: 50%;
+    overflow: hidden;
+    width: 2.4rem;
+    height: 2.4rem;
+    rotate: -30deg;
+    box-shadow: 0 0 0 1.5px var(--line-strong);
+  }
+  .ps__sw span { flex: 1; }
+
+  /* Formato en fila (menú móvil) */
+  .psi__title { color: inherit; opacity: 0.75; margin-left: 0; }
+  .psi__row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+  .psi__opt {
+    display: grid;
+    justify-items: center;
+    gap: 0.4rem;
+    padding: 0.7rem 0.4rem;
+    border-radius: 16px;
+    border: 2px solid transparent;
+    background: color-mix(in srgb, currentColor 8%, transparent);
+    color: inherit;
+    font: inherit;
+    font-size: var(--step--1);
+    font-weight: 650;
+    line-height: 1.2;
+    text-align: center;
+    cursor: pointer;
+  }
+  .psi__opt[aria-checked='true'] { border-color: currentColor; }
+</style>

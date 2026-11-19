@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://wearevisiblestudio.com/sitemap-index.xml

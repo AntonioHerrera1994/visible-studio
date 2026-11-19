@@ -1,0 +1,46 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import ProjectBanner from './ProjectBanner.astro';
+import { industries } from '../lib/projects.config';
+import { type Lang, route } from '../i18n/ui';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+  lang: Lang;
+  eager?: boolean;
+}
+const { project, lang, eager } = Astro.props;
+const p = project.data;
+const href = `${route(lang, 'work')}${p.slug}/`;
+const industry = industries[p.industry]?.[lang] ?? p.industry;
+---
+
+<article class="pc" data-industry={p.industry} style={`view-transition-name: card-${p.slug}`}>
+  <a href={href} class="pc__link" data-eyes-attract data-tilt>
+    <ProjectBanner project={project} lang={lang} eager={eager} />
+  </a>
+  <div class="pc__body">
+    <p class="pc__industry muted">{industry}</p>
+    <h3><a href={href}>{p.title}</a></h3>
+    <p class="pc__desc muted">{p.desc[lang]}</p>
+  </div>
+</article>
+
+<style>
+  .pc { display: grid; gap: 1.1rem; align-content: start; }
+  .pc__link { display: block; border-radius: 18px; text-decoration: none; }
+  .pc__link:hover :global(.pb) { border-radius: 26px; }
+  .pc__body { display: grid; gap: 0.35rem; }
+  .pc__industry { font-size: var(--step--1); font-weight: 600; }
+  .pc h3 { font-size: var(--step-1); line-height: 1.15; }
+  .pc h3 a { text-decoration: none; }
+  .pc h3 a:hover { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 2px; }
+  .pc__desc {
+    font-size: 0.95rem;
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>

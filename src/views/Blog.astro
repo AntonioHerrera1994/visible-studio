@@ -1,0 +1,74 @@
+---
+import { getCollection, render, type CollectionEntry } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import PageHero from '../components/PageHero.astro';
+import FinalCta from '../components/FinalCta.astro';
+import { type Lang, route } from '../i18n/ui';
+import { alternatesFor } from '../lib/content';
+
+/** Sin `entry` = listado del blog. Con `entry` = artículo. */
+interface Props { lang: Lang; entry?: CollectionEntry<'blog'> }
+const { lang, entry } = Astro.props;
+const posts = (await getCollection('blog', (p) => p.data.lang === lang && !p.data.draft))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+const fmt = (d: Date) => d.toLocaleDateString(lang === 'es' ? 'es-MX' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const copy = {
+  es: { title: 'Blog de marketing digital, SEO y diseño', description: 'Guías prácticas de SEO, marketing digital y diseño para negocios en México.', h1: 'Blog', lede: 'Guías prácticas para que tu negocio se vea en internet.', updated: 'Actualizado' },
+  en: { title: 'Digital marketing, SEO and design blog', description: 'Practical guides on SEO, digital marketing and design for businesses.', h1: 'Blog', lede: 'Practical guides to get your business seen online.', updated: 'Updated' },
+}[lang];
+const alternates = entry ? await alternatesFor('blog', entry.data.key, 'blog') : { es: '/es/blog/', en: '/en/blog/' };
+const Content = entry ? (await render(entry)).Content : null;
+const schema = entry
+  ? [{
+      '@context': 'https://schema.org',
+      '@type': 'BlogPosting',
+      headline: entry.data.title,
+      description: entry.data.description,
+      datePublished: entry.data.date.toISOString(),
+      dateModified: (entry.data.updated ?? entry.data.date).toISOString(),
+      author: { '@id': 'https://wearevisiblestudio.com/#org' },
+      inLanguage: lang,
+    }]
+  : [];
+---
+
+{entry && Content ? (
+  <Base lang={lang} title={entry.data.title} description={entry.data.description} alternates={alternates} schema={schema}>
+    <article>
+      <header class="wrap post-head">
+        <p class="muted">{entry.data.topic}, <time datetime={entry.data.date.toISOString()}>{fmt(entry.data.date)}</time></p>
+        <h1>{entry.data.title}</h1>
+        <p class="lede muted">{entry.data.description}</p>
+      </header>
+      <div class="wrap prose post-body"><Content /></div>
+    </article>
+    <FinalCta lang={lang} />
+  </Base>
+) : (
+  <Base lang={lang} title={copy.title} description={copy.description} alternates={alternates}>
+    <PageHero h1={copy.h1} lede={copy.lede} />
+    <section class="section">
+      <ul class="wrap posts">
+        {posts.map((p) => (
+          <li>
+            <a href={`${route(lang, 'blog')}${p.data.slug}/`}>
+              <p class="muted">{p.data.topic}, <time datetime={p.data.date.toISOString()}>{fmt(p.data.date)}</time></p>
+              <h2>{p.data.title}</h2>
+              <p class="muted">{p.data.description}</p>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  </Base>
+)}
+
+<style>
+  .post-head { padding-block: clamp(2.5rem, 6vw, 5rem) 2rem; display: grid; gap: 1.25rem; }
+  .post-head h1 { font-size: var(--step-3); max-width: 20ch; }
+  .post-body { padding-bottom: var(--space-l); }
+  .posts { list-style: none; padding: 0; border-top: 1px solid var(--line); }
+  .posts a { display: grid; gap: 0.6rem; padding-block: 2rem; border-bottom: 1px solid var(--line); text-decoration: none; }
+  .posts h2 { font-size: var(--step-2); max-width: 28ch; }
+  .posts a:hover h2 { color: var(--accent); }
+</style>

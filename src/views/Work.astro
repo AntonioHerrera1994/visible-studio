@@ -1,0 +1,251 @@
+---
+import { getCollection, type CollectionEntry } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import PageHero from '../components/PageHero.astro';
+import ProjectCard from '../components/ProjectCard.astro';
+import ProjectBanner from '../components/ProjectBanner.astro';
+import FinalCta from '../components/FinalCta.astro';
+import { industries } from '../lib/projects.config';
+import { type Lang, route } from '../i18n/ui';
+
+/** Sin `entry` = portafolio con filtros. Con `entry` = página del proyecto. */
+interface Props { lang: Lang; entry?: CollectionEntry<'projects'> }
+const { lang, entry } = Astro.props;
+
+const all = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
+
+const copy = {
+  es: {
+    title: 'Portafolio: sitios web y proyectos digitales',
+    description: 'Sitios web y plataformas que hemos diseñado y desarrollado para negocios de salud, bienes raíces, industria, transporte, tecnología y más.',
+    h1: 'Trabajo que se ve',
+    lede: `${all.length} sitios web y plataformas para negocios de México y Estados Unidos. Filtra por industria y entra a cada uno.`,
+    all: 'Todos',
+    filterLabel: 'Filtrar por industria',
+    visit: 'Visitar el sitio',
+    industry: 'Industria',
+    stack: 'Tecnologías',
+    site: 'Sitio',
+    more: 'Más proyectos de',
+    back: 'Ver todo el portafolio',
+    empty: 'Aún no hay proyectos en esta industria.',
+  },
+  en: {
+    title: 'Portfolio: websites and digital projects',
+    description: 'Websites and platforms we designed and built for healthcare, real estate, industrial, transport, technology businesses and more.',
+    h1: 'Work that gets seen',
+    lede: `${all.length} websites and platforms for businesses in Mexico and the United States. Filter by industry and open each one.`,
+    all: 'All',
+    filterLabel: 'Filter by industry',
+    visit: 'Visit the website',
+    industry: 'Industry',
+    stack: 'Technologies',
+    site: 'Website',
+    more: 'More projects in',
+    back: 'See the full portfolio',
+    empty: 'No projects in this industry yet.',
+  },
+}[lang];
+
+// Industrias presentes, ordenadas por cantidad
+const counts = all.reduce<Record<string, number>>((acc, p) => ((acc[p.data.industry] = (acc[p.data.industry] ?? 0) + 1), acc), {});
+const filters = Object.entries(counts)
+  .sort((a, b) => (a[0] === 'otro' ? 1 : b[0] === 'otro' ? -1 : b[1] - a[1]))
+  .map(([id, n]) => ({ id, n, label: industries[id]?.[lang] ?? id }));
+
+const workBase = route(lang, 'work');
+const alternates = entry
+  ? { es: `/es/trabajo/${entry.data.slug}/`, en: `/en/work/${entry.data.slug}/` }
+  : { es: '/es/trabajo/', en: '/en/work/' };
+
+const related = entry
+  ? all.filter((p) => p.data.industry === entry.data.industry && p.id !== entry.id).slice(0, 3)
+  : [];
+const industryLabel = entry ? industries[entry.data.industry]?.[lang] ?? entry.data.industry : '';
+const schema = entry
+  ? [{
+      '@context': 'https://schema.org',
+      '@type': 'CreativeWork',
+      name: entry.data.title,
+      description: entry.data.desc[lang],
+      url: entry.data.url,
+      creator: { '@id': 'https://wearevisiblestudio.com/#org' },
+    }]
+  : [];
+---
+
+{entry ? (
+  <Base lang={lang} title={`${entry.data.title}: ${industryLabel}`} description={entry.data.desc[lang]} alternates={alternates} schema={schema}>
+    <section class="detail">
+      <div class="wrap detail__grid">
+        <div class="detail__text">
+          <a class="detail__back muted" href={workBase}>{copy.back}</a>
+          <h1 data-reveal="mask">{entry.data.title}</h1>
+          <p class="lede muted" data-reveal style="--i:1">{entry.data.desc[lang]}</p>
+          <dl class="detail__meta" data-reveal style="--i:2">
+            <div><dt>{copy.industry}</dt><dd>{industryLabel}</dd></div>
+            <div><dt>{copy.site}</dt><dd>{entry.data.domain}</dd></div>
+            {entry.data.stack.length > 0 && <div><dt>{copy.stack}</dt><dd>{entry.data.stack.join(', ')}</dd></div>}
+          </dl>
+          <a class="btn btn--primary" href={entry.data.url} target="_blank" rel="noopener" data-eyes-attract data-magnetic data-reveal style="--i:3">
+            {copy.visit}
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </a>
+        </div>
+        <a class="detail__banner" href={entry.data.url} target="_blank" rel="noopener" data-tilt aria-label={`${copy.visit}: ${entry.data.domain}`}>
+          <ProjectBanner project={entry} lang={lang} eager size="hero" />
+        </a>
+      </div>
+    </section>
+
+    {related.length > 0 && (
+      <section class="section section--white">
+        <div class="wrap">
+          <h2 class="related__h" data-reveal="mask">{copy.more} {industryLabel.toLowerCase()}</h2>
+          <div class="grid" data-stagger>
+            {related.map((p) => <div data-reveal><ProjectCard project={p} lang={lang} /></div>)}
+          </div>
+        </div>
+      </section>
+    )}
+    <FinalCta lang={lang} />
+  </Base>
+) : (
+  <Base lang={lang} title={copy.title} description={copy.description} alternates={alternates}>
+    <PageHero h1={copy.h1} lede={copy.lede} />
+
+    <section class="section section--white portfolio" data-portfolio>
+      <div class="wrap">
+        <div class="filters" role="group" aria-label={copy.filterLabel}>
+          <button class="filter" aria-pressed="true" data-filter="all">{copy.all} <span>{all.length}</span></button>
+          {filters.map((f) => (
+            <button class="filter" aria-pressed="false" data-filter={f.id}>{f.label} <span>{f.n}</span></button>
+          ))}
+        </div>
+        <p class="visually-hidden" aria-live="polite" data-filter-status></p>
+
+        <div class="grid">
+          {all.map((p, i) => <ProjectCard project={p} lang={lang} eager={i < 3} />)}
+        </div>
+        <p class="empty muted" hidden data-empty>{copy.empty}</p>
+      </div>
+    </section>
+
+    <FinalCta lang={lang} />
+  </Base>
+)}
+
+<script>
+  /**
+   * Filtros del portafolio. Usa View Transitions para que las tarjetas se reacomoden con suavidad.
+   * Recuerda el filtro en la URL (?industria=salud) para poder compartirlo.
+   */
+  function initFilters() {
+    const root = document.querySelector<HTMLElement>('[data-portfolio]');
+    if (!root || root.dataset.ready) return;
+    root.dataset.ready = '1';
+    const buttons = [...root.querySelectorAll<HTMLButtonElement>('[data-filter]')];
+    const cards = [...root.querySelectorAll<HTMLElement>('[data-industry]')];
+    const status = root.querySelector<HTMLElement>('[data-filter-status]')!;
+    const empty = root.querySelector<HTMLElement>('[data-empty]')!;
+
+    const apply = (id: string) => {
+      let shown = 0;
+      cards.forEach((c) => {
+        const on = id === 'all' || c.dataset.industry === id;
+        c.hidden = !on;
+        if (on) shown++;
+      });
+      buttons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.filter === id)));
+      empty.hidden = shown > 0;
+      const label = buttons.find((b) => b.dataset.filter === id)?.firstChild?.textContent?.trim() ?? '';
+      status.textContent = `${label}: ${shown}`;
+    };
+
+    const go = (id: string) => {
+      const url = new URL(location.href);
+      if (id === 'all') url.searchParams.delete('industria');
+      else url.searchParams.set('industria', id);
+      history.replaceState(history.state, '', url);
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      // @ts-ignore
+      if (document.startViewTransition && !reduced) document.startViewTransition(() => apply(id));
+      else apply(id);
+    };
+
+    buttons.forEach((b) => b.addEventListener('click', () => go(b.dataset.filter!)));
+    const initial = new URLSearchParams(location.search).get('industria');
+    if (initial && buttons.some((b) => b.dataset.filter === initial)) apply(initial);
+  }
+  document.addEventListener('astro:page-load', initFilters);
+</script>
+
+<style>
+  .filters {
+    position: sticky;
+    top: 4.6rem;
+    z-index: 5;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding-block: 0.75rem;
+    margin-bottom: 2rem;
+    background: var(--bg);
+  }
+  .filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.55rem 1rem;
+    border-radius: var(--radius-pill);
+    border: 1.5px solid var(--line-strong);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+  }
+  .filter span { font-size: 0.75rem; opacity: 0.6; font-variant-numeric: tabular-nums; }
+  .filter:hover { border-color: var(--fg); }
+  .filter[aria-pressed='true'] { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3rem 1.5rem;
+  }
+  .grid > :global([hidden]) { display: none; }
+  .empty { padding: 3rem 0; }
+
+  /* Página del proyecto */
+  .detail { padding-block: clamp(2rem, 5vw, 4rem) var(--space-l); }
+  .detail__grid { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: clamp(2rem, 5vw, 4.5rem); align-items: center; }
+  .detail__back { display: inline-block; margin-bottom: 1.5rem; font-weight: 600; font-size: var(--step--1); }
+  .detail h1 {
+    font-size: clamp(2.6rem, 6vw, 5rem);
+    font-weight: 800;
+    font-stretch: 76%;
+    letter-spacing: -0.04em;
+    line-height: 0.95;
+    margin-bottom: 1.25rem;
+  }
+  .detail .lede { max-width: 40ch; margin-bottom: 2rem; }
+  .detail__meta { display: grid; gap: 0.75rem; margin: 0 0 2rem; }
+  .detail__meta div { display: grid; grid-template-columns: 8.5rem 1fr; gap: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--line); }
+  .detail__meta dt { color: var(--muted); font-weight: 550; }
+  .detail__meta dd { margin: 0; font-weight: 650; }
+  .detail__banner { display: block; border-radius: 18px; text-decoration: none; }
+  .related__h { font-size: var(--step-2); margin-bottom: 2rem; }
+
+  @media (max-width: 1000px) {
+    .grid { grid-template-columns: 1fr 1fr; }
+    .detail__grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 640px) {
+    .grid { grid-template-columns: 1fr; }
+    .filters { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: calc(var(--gutter) * -1); padding-inline: var(--gutter); }
+    .filter { flex: none; }
+  }
+</style>

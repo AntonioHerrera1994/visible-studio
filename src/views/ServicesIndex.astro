@@ -1,0 +1,91 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import PageHero from '../components/PageHero.astro';
+import FinalCta from '../components/FinalCta.astro';
+import { type Lang, route } from '../i18n/ui';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const all = (await getCollection('services', (s) => s.data.lang === lang)).sort((a, b) => a.data.order - b.data.order);
+const core = all.filter((s) => s.data.kind === 'core');
+const local = all.filter((s) => s.data.kind === 'local');
+const industries = (await getCollection('industries', (i) => i.data.lang === lang)).sort((a, b) => a.data.order - b.data.order);
+const base = route(lang, 'services');
+
+const copy = {
+  es: {
+    title: 'Servicios de diseño, web, SEO y marketing digital',
+    description: 'Branding, diseño web, SEO y marketing digital para negocios en Tijuana, México y Estados Unidos.',
+    h1: 'Servicios para que te vean',
+    lede: 'Cuatro servicios que funcionan solos o juntos. Empieza por el que resuelve tu problema más urgente.',
+    local: 'En Tijuana',
+    industries: 'Por industria',
+  },
+  en: {
+    title: 'Design, web, SEO and digital marketing services',
+    description: 'Branding, web design, SEO and digital marketing for businesses in Tijuana, Mexico and the US.',
+    h1: 'Services to get you seen',
+    lede: 'Four services that work alone or together. Start with the one that fixes your most urgent problem.',
+    local: 'In Tijuana',
+    industries: 'By industry',
+  },
+}[lang];
+---
+
+<Base lang={lang} title={copy.title} description={copy.description} alternates={{ es: '/es/servicios/', en: '/en/services/' }}>
+  <PageHero h1={copy.h1} lede={copy.lede} />
+
+  <section class="section">
+    <div class="wrap svc-grid">
+      {core.map((s) => (
+        <a class="svc" href={`${base}${s.data.slug}/`} data-eyes-attract>
+          <p class="svc__problem muted">“{s.data.problem}”</p>
+          <h2>{s.data.h1}</h2>
+          <p>{s.data.lede}</p>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <section class="section section--paper">
+    <div class="wrap dir">
+      {local.length > 0 && (
+        <div>
+          <h2>{copy.local}</h2>
+          <ul>{local.map((s) => <li><a href={`${base}${s.data.slug}/`}>{s.data.h1}</a></li>)}</ul>
+        </div>
+      )}
+      <div>
+        <h2>{copy.industries}</h2>
+        <ul>{industries.map((i) => <li><a href={`${route(lang, 'industries')}${i.data.slug}/`}>{i.data.h1}</a></li>)}</ul>
+      </div>
+    </div>
+  </section>
+
+  <FinalCta lang={lang} />
+</Base>
+
+<style>
+  .svc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+  .svc {
+    display: grid;
+    gap: 1rem;
+    align-content: start;
+    padding: clamp(1.5rem, 3vw, 2.5rem);
+    border: 1.5px solid var(--line);
+    border-radius: var(--radius-card);
+    text-decoration: none;
+    min-height: 300px;
+    transition: border-color 0.2s, background-color 0.2s;
+  }
+  .svc:hover { border-color: var(--accent); background: var(--hover); }
+  .svc h2 { font-size: var(--step-3); }
+  .svc p:last-child { max-width: 44ch; }
+  .dir { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; }
+  .dir h2 { font-size: var(--step-2); margin-bottom: 1.25rem; }
+  .dir ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+  .dir a { font-weight: 600; font-size: var(--step-1); text-decoration-thickness: 2px; text-underline-offset: 4px; }
+  .dir a:hover { color: var(--accent); }
+  @media (max-width: 760px) { .svc-grid, .dir { grid-template-columns: 1fr; } }
+</style>

@@ -1,0 +1,426 @@
+---
+import { getCollection } from 'astro:content';
+import Eyes from './Eyes.astro';
+import PaletteSwitcher from './PaletteSwitcher.astro';
+import { type Lang, t, route, languages } from '../i18n/ui';
+
+interface Props {
+  lang: Lang;
+  alternates: Record<Lang, string>;
+}
+const { lang, alternates } = Astro.props;
+const path = Astro.url.pathname;
+const other = lang === 'es' ? 'en' : 'es';
+
+const services = (await getCollection('services', (s) => s.data.lang === lang && s.data.kind === 'core'))
+  .sort((a, b) => a.data.order - b.data.order);
+const svcBase = route(lang, 'services');
+
+const nav = [
+  { href: route(lang, 'work'), label: t(lang, 'nav.work') },
+  { href: route(lang, 'industries'), label: t(lang, 'nav.industries') },
+  { href: route(lang, 'about'), label: t(lang, 'nav.about') },
+  { href: route(lang, 'blog'), label: t(lang, 'nav.blog') },
+];
+
+const dd = {
+  es: { all: 'Ver todos los servicios', local: 'Servicios en Tijuana', cardTitle: '¿Qué tan visible eres?', cardText: 'Seis preguntas, un minuto.', cardCta: 'Haz el diagnóstico' },
+  en: { all: 'See all services', local: 'Services in Tijuana', cardTitle: 'How visible are you?', cardText: 'Six questions, one minute.', cardCta: 'Take the check' },
+}[lang];
+const isServices = path.startsWith(svcBase);
+---
+
+<header class="header">
+  <div class="header__inner wrap">
+    <a class="logo" href={route(lang, 'home')} aria-label="Visible Studio" transition:persist="logo">
+      <span class="logo__eyes"><Eyes variant="mini" /></span>
+      <span class="logo__word">visible studio</span>
+    </a>
+
+    <nav class="nav" aria-label={lang === 'es' ? 'Principal' : 'Main'}>
+      <ul>
+        <li><a href={nav[0].href} aria-current={path.startsWith(nav[0].href) ? 'page' : undefined}>{nav[0].label}</a></li>
+        <li class="nav__dd" data-dd>
+          <button
+            class="nav__trigger"
+            popovertarget="services-menu"
+            aria-current={isServices ? 'page' : undefined}
+            data-dd-trigger
+          >
+            {t(lang, 'nav.services')}
+            <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </button>
+          <div id="services-menu" popover class="dd" data-dd-panel>
+            <ul class="dd__list">
+              {services.map((s, i) => (
+                <li style={`--i:${i}`}>
+                  <a href={`${svcBase}${s.data.slug}/`} class="dd__item">
+                    <strong>{s.data.h1}</strong>
+                    <span>{s.data.problem}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <a class="dd__card" href={route(lang, 'audit')} data-eyes-attract>
+              <span class="dd__eyes"><Eyes variant="mini" /></span>
+              <strong>{dd.cardTitle}</strong>
+              <span>{dd.cardText}</span>
+              <span class="dd__cta">{dd.cardCta}</span>
+            </a>
+            <div class="dd__foot">
+              <a href={svcBase}>{dd.all}</a>
+              {lang === 'es' && <a href={`${svcBase}marketing-medico-tijuana/`}>{dd.local}</a>}
+            </div>
+          </div>
+        </li>
+        {nav.slice(1).map((item) => (
+          <li>
+            <a href={item.href} aria-current={path.startsWith(item.href) ? 'page' : undefined}>{item.label}</a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+
+    <div class="header__actions">
+      <PaletteSwitcher lang={lang} />
+      <a class="lang" href={alternates[other]} hreflang={other} lang={other}>
+        <span aria-hidden="true">{other.toUpperCase()}</span>
+        <span class="visually-hidden">{languages[other]}</span>
+      </a>
+      <a class="btn btn--primary header__cta" href={route(lang, 'audit')} data-eyes-attract>
+        {t(lang, 'nav.cta')}
+      </a>
+      <button class="menu-btn" popovertarget="mobile-menu" aria-label={t(lang, 'nav.menu')}>
+        <span></span><span></span>
+      </button>
+    </div>
+  </div>
+
+  <div id="mobile-menu" popover class="mobile-menu">
+    <div class="mobile-menu__top">
+      <span class="mobile-menu__eyes"><Eyes variant="mini" /></span>
+      <button class="mobile-menu__close" popovertarget="mobile-menu" popovertargetaction="hide">
+        {t(lang, 'nav.close')}
+      </button>
+    </div>
+    <ul class="mobile-menu__nav">
+      <li style="--i:0"><a href={nav[0].href}>{nav[0].label}</a></li>
+      <li style="--i:1">
+        <details class="m-acc">
+          <summary>{t(lang, 'nav.services')}</summary>
+          <ul>
+            {services.map((s) => <li><a href={`${svcBase}${s.data.slug}/`}>{s.data.h1}</a></li>)}
+            <li><a href={svcBase}>{dd.all}</a></li>
+          </ul>
+        </details>
+      </li>
+      {nav.slice(1).map((item, i) => (
+        <li style={`--i:${i + 2}`}><a href={item.href}>{item.label}</a></li>
+      ))}
+    </ul>
+    <div class="mobile-menu__bottom">
+      <PaletteSwitcher lang={lang} variant="inline" />
+      <div class="mobile-menu__actions">
+        <a class="btn btn--dark" href={route(lang, 'audit')}>{t(lang, 'nav.cta')}</a>
+        <a class="mobile-menu__lang" href={alternates[other]} hreflang={other}>{languages[other]}</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<script>
+  /**
+   * Dropdown de Servicios: popover nativo + anchor positioning.
+   * En escritorio abre al pasar el cursor (con una pequeña pausa para no abrir por accidente);
+   * con clic, teclado o toque funciona igual gracias al popover. Esc y clic afuera lo cierran.
+   */
+  const anchorSupported = CSS.supports('anchor-name: --a');
+
+  function placeFallback(panel: HTMLElement, trigger: HTMLElement, align: 'left' | 'right') {
+    if (anchorSupported) return;
+    const r = trigger.getBoundingClientRect();
+    panel.style.position = 'fixed';
+    panel.style.top = `${r.bottom + 10}px`;
+    if (align === 'left') panel.style.left = `${Math.max(16, r.left - 12)}px`;
+    else panel.style.left = `${Math.max(16, r.right - panel.offsetWidth)}px`;
+  }
+
+  function initNav() {
+    const dd = document.querySelector<HTMLElement>('[data-dd]');
+    if (!dd || dd.dataset.ready) return;
+    dd.dataset.ready = '1';
+    const trigger = dd.querySelector<HTMLButtonElement>('[data-dd-trigger]')!;
+    const panel = dd.querySelector<HTMLElement>('[data-dd-panel]')!;
+    const canHover = window.matchMedia('(hover: hover) and (pointer: fine)');
+    let openT = 0;
+    let closeT = 0;
+
+    const open = () => { if (!panel.matches(':popover-open')) panel.showPopover(); };
+    const close = () => { if (panel.matches(':popover-open')) panel.hidePopover(); };
+
+    panel.addEventListener('toggle', (e) => {
+      const isOpen = (e as ToggleEvent).newState === 'open';
+      trigger.setAttribute('aria-expanded', String(isOpen));
+      if (isOpen) placeFallback(panel, trigger, 'left');
+    });
+
+    for (const el of [trigger, panel]) {
+      el.addEventListener('pointerenter', () => {
+        if (!canHover.matches) return;
+        clearTimeout(closeT);
+        openT = window.setTimeout(open, 90);
+      });
+      el.addEventListener('pointerleave', () => {
+        if (!canHover.matches) return;
+        clearTimeout(openT);
+        closeT = window.setTimeout(close, 220);
+      });
+    }
+
+    // Selector de paleta: mismo posicionamiento de respaldo.
+    const pTrigger = document.querySelector<HTMLElement>('[data-palette-trigger]');
+    const pPanel = document.querySelector<HTMLElement>('[data-palette-panel]');
+    pPanel?.addEventListener('toggle', (e) => {
+      if ((e as ToggleEvent).newState === 'open' && pTrigger) placeFallback(pPanel, pTrigger, 'right');
+    });
+
+    // Al tocar un enlace del menú móvil, se cierra el menú.
+    document.querySelectorAll<HTMLAnchorElement>('#mobile-menu a').forEach((a) =>
+      a.addEventListener('click', () => document.getElementById('mobile-menu')?.hidePopover()),
+    );
+  }
+  document.addEventListener('astro:page-load', initNav);
+</script>
+
+<style>
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--header-bg);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--line);
+    transition: background-color 0.4s;
+  }
+  .header__inner { display: flex; align-items: center; gap: 2rem; min-height: 4.5rem; }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    text-decoration: none;
+    font-weight: 800;
+    font-size: 1.3rem;
+    letter-spacing: -0.04em;
+    font-stretch: 78%;
+    white-space: nowrap;
+  }
+  .logo__eyes { width: 3.1rem; }
+  .nav { margin-right: auto; }
+  .nav > ul { display: flex; gap: 0.25rem; list-style: none; margin: 0; padding: 0; }
+  .nav > ul > li > a,
+  .nav__trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.8rem;
+    border-radius: var(--radius-pill);
+    text-decoration: none;
+    font: inherit;
+    font-weight: 550;
+    color: color-mix(in srgb, var(--fg) 82%, var(--bg));
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+  .nav > ul > li > a:hover,
+  .nav > ul > li > a[aria-current='page'],
+  .nav__trigger:hover,
+  .nav__trigger[aria-current='page'],
+  .nav__trigger[aria-expanded='true'] { color: var(--fg); background: var(--hover); }
+  .chev { width: 0.75rem; transition: rotate 0.25s var(--ease-out); }
+  .nav__trigger[aria-expanded='true'] .chev { rotate: 180deg; }
+
+  /* ---- Dropdown híbrido: servicios + tarjeta de diagnóstico ---- */
+  .nav__trigger { anchor-name: --services; }
+  .dd {
+    position-anchor: --services;
+    position-area: bottom span-right;
+    position-try-fallbacks: flip-inline;
+    inset: auto;
+    margin: 0.6rem 0 0 -0.75rem;
+    width: min(680px, calc(100vw - 2rem));
+    padding: 0.75rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 24px;
+    background: var(--bg);
+    color: var(--fg);
+    box-shadow: 0 30px 80px -30px rgb(0 0 0 / 0.55);
+    display: none;
+    grid-template-columns: 1.55fr 1fr;
+    grid-template-areas: 'list card' 'foot foot';
+    gap: 0.5rem;
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: opacity 0.2s, transform 0.3s var(--ease-out), display 0.3s allow-discrete, overlay 0.3s allow-discrete;
+  }
+  .dd:popover-open { display: grid; opacity: 1; transform: none; }
+  @starting-style { .dd:popover-open { opacity: 0; transform: translateY(-8px); } }
+
+  .dd__list { grid-area: list; list-style: none; margin: 0; padding: 0; display: grid; gap: 0.15rem; }
+  .dd__list li {
+    opacity: 0;
+    translate: -6px 0;
+    transition: opacity 0.3s, translate 0.35s var(--ease-out);
+    transition-delay: calc(var(--i) * 40ms + 60ms);
+  }
+  .dd:popover-open .dd__list li { opacity: 1; translate: 0 0; }
+  @starting-style { .dd:popover-open .dd__list li { opacity: 0; translate: -6px 0; } }
+  .dd__item {
+    display: grid;
+    gap: 0.1rem;
+    padding: 0.75rem 0.9rem;
+    border-radius: 14px;
+    text-decoration: none;
+    line-height: 1.3;
+  }
+  .dd__item strong { font-weight: 700; }
+  .dd__item span { color: var(--muted); font-size: var(--step--1); }
+  .dd__item:hover, .dd__item:focus-visible { background: var(--hover); }
+  .dd__item:hover strong { color: var(--accent); }
+
+  .dd__card {
+    grid-area: card;
+    display: grid;
+    align-content: end;
+    gap: 0.2rem;
+    padding: 1.1rem;
+    border-radius: 18px;
+    background: var(--accent);
+    color: var(--on-accent);
+    text-decoration: none;
+    line-height: 1.3;
+    --eye-brow: var(--on-accent);
+    transition: transform 0.3s var(--ease-out);
+  }
+  .dd__card:hover { transform: translateY(-2px); }
+  .dd__eyes { width: 4.5rem; margin-bottom: auto; padding-bottom: 1.5rem; }
+  .dd__card strong { font-size: var(--step-1); font-stretch: 85%; letter-spacing: -0.01em; }
+  .dd__card span:not(.dd__eyes) { font-size: var(--step--1); }
+  .dd__cta { margin-top: 0.6rem; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+
+  .dd__foot {
+    grid-area: foot;
+    display: flex;
+    gap: 1.25rem;
+    padding: 0.75rem 0.9rem 0.25rem;
+    border-top: 1px solid var(--line);
+    font-size: var(--step--1);
+    font-weight: 600;
+  }
+  .dd__foot a { text-decoration: none; color: var(--muted); }
+  .dd__foot a:hover { color: var(--fg); }
+
+  .header__actions { display: flex; align-items: center; gap: 0.6rem; }
+  .lang {
+    font-weight: 700;
+    font-size: var(--step--1);
+    text-decoration: none;
+    padding: 0.5rem 0.7rem;
+    border: 1.5px solid var(--line-strong);
+    border-radius: var(--radius-pill);
+  }
+  .lang:hover { border-color: var(--fg); }
+  .header__cta { padding: 0.75em 1.2em; font-size: 0.95rem; }
+
+  .menu-btn {
+    display: none;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 50%;
+    border: 1.5px solid var(--line-strong);
+    background: none;
+    cursor: pointer;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+  }
+  .menu-btn span { width: 18px; height: 2px; background: var(--fg); border-radius: 2px; }
+
+  /* ---- Menú móvil ---- */
+  .mobile-menu {
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    border: 0;
+    padding: 1.25rem var(--gutter) 2rem;
+    background: var(--accent);
+    color: var(--on-accent);
+    --eye-brow: var(--on-accent);
+    flex-direction: column;
+    gap: 1.25rem;
+    overflow-y: auto;
+    clip-path: circle(0% at calc(100% - 2.5rem) 2.5rem);
+    transition: clip-path 0.55s var(--ease-out), display 0.55s allow-discrete, overlay 0.55s allow-discrete;
+  }
+  .mobile-menu:popover-open { display: flex; clip-path: circle(150% at calc(100% - 2.5rem) 2.5rem); }
+  @starting-style { .mobile-menu:popover-open { clip-path: circle(0% at calc(100% - 2.5rem) 2.5rem); } }
+  .mobile-menu__top { display: flex; justify-content: space-between; align-items: center; }
+  .mobile-menu__eyes { width: 4rem; }
+  .mobile-menu__close {
+    background: var(--ink);
+    color: var(--on-ink);
+    border: 0;
+    padding: 0.7rem 1.2rem;
+    border-radius: var(--radius-pill);
+    font: inherit;
+    font-weight: 650;
+    cursor: pointer;
+  }
+  .mobile-menu__nav { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.1rem; }
+  .mobile-menu__nav > li {
+    opacity: 0;
+    translate: 0 16px;
+    transition: opacity 0.4s, translate 0.5s var(--ease-out);
+    transition-delay: calc(var(--i) * 50ms + 120ms);
+  }
+  .mobile-menu:popover-open .mobile-menu__nav > li { opacity: 1; translate: 0 0; }
+  @starting-style { .mobile-menu:popover-open .mobile-menu__nav > li { opacity: 0; translate: 0 16px; } }
+  .mobile-menu__nav > li > a,
+  .m-acc summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: clamp(2rem, 9vw, 2.8rem);
+    font-weight: 780;
+    font-stretch: 80%;
+    letter-spacing: -0.03em;
+    text-decoration: none;
+    line-height: 1.2;
+    cursor: pointer;
+    list-style: none;
+  }
+  .m-acc summary::-webkit-details-marker { display: none; }
+  .m-acc summary::after { content: '+'; font-weight: 500; transition: rotate 0.3s var(--ease-out); }
+  .m-acc[open] summary::after { rotate: 45deg; }
+  .m-acc::details-content { block-size: 0; overflow: hidden; transition: block-size 0.35s var(--ease-out), content-visibility 0.35s allow-discrete; }
+  .m-acc[open]::details-content { block-size: auto; }
+  .m-acc ul { list-style: none; margin: 0.25rem 0 0.75rem; padding: 0 0 0 0.25rem; display: grid; gap: 0.35rem; }
+  .m-acc ul a { font-size: var(--step-1); font-weight: 650; text-decoration: none; }
+  .mobile-menu__bottom { margin-top: auto; display: grid; gap: 1.25rem; }
+  .mobile-menu__actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  .mobile-menu__lang { font-weight: 650; }
+
+  @media (max-width: 1080px) {
+    .nav, .lang, .header__cta, .header__actions :global(.ps) { display: none; }
+    .menu-btn { display: inline-flex; }
+    .header__inner { justify-content: space-between; }
+  }
+  @media (max-width: 560px) {
+    .dd { grid-template-columns: 1fr; grid-template-areas: 'list' 'card' 'foot'; }
+  }
+</style>

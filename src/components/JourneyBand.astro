@@ -1,0 +1,472 @@
+---
+/**
+ * Llamada a la acción con un recorrido animado en motion graphics:
+ * un auto avanza por una carretera de luz mientras pasan buscadores, gráficas,
+ * pines de mapa y ventanas de sitios web. Al fondo, una ciudad hecha de barras de analítica.
+ *
+ * Se dibuja en <canvas> en tiempo real: pesa casi nada, nunca corta el loop
+ * y toma los colores de la paleta activa.
+ *
+ * ¿Quieren usar un video hecho con IA (Veo, Kling, Sora…)? Guárdenlo en /public/video/
+ * y pásenlo en `video`, por ejemplo: <JourneyBand video="/video/recorrido.mp4" … />
+ * El canvas queda como respaldo y para quien prefiere menos movimiento.
+ */
+interface Props {
+  text: string;
+  cta: string;
+  href: string;
+  video?: string;
+  poster?: string;
+}
+const { text, cta, href, video, poster } = Astro.props;
+---
+
+<div class="journey" data-reveal="scale">
+  {video ? (
+    <video class="journey__media" src={video} poster={poster} autoplay muted loop playsinline preload="metadata" aria-hidden="true"></video>
+  ) : (
+    <canvas class="journey__media" data-journey aria-hidden="true"></canvas>
+  )}
+  <div class="journey__shade" aria-hidden="true"></div>
+  <div class="journey__content">
+    <p>{text}</p>
+    <a class="btn btn--primary" href={href} data-eyes-attract data-magnetic>{cta}</a>
+  </div>
+</div>
+
+<script>
+  type RGB = [number, number, number];
+
+  function toRGB(color: string): RGB {
+    const c = document.createElement('canvas').getContext('2d')!;
+    c.fillStyle = color;
+    const hex = c.fillStyle as string; // normaliza a #rrggbb
+    const n = parseInt(hex.slice(1), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  const rgba = ([r, g, b]: RGB, a = 1) => `rgba(${r},${g},${b},${a})`;
+
+  interface Thing {
+    kind: 'search' | 'chart' | 'pin' | 'window' | 'eye' | 'bubble';
+    side: -1 | 1;
+    x: number; // distancia lateral (mundo)
+    y: number; // altura (mundo)
+    z: number; // profundidad (mundo)
+    spin: number;
+  }
+
+  function startJourney(canvas: HTMLCanvasElement) {
+    if (canvas.dataset.ready) return;
+    canvas.dataset.ready = '1';
+    const ctx = canvas.getContext('2d')!;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    let W = 0, H = 0, dpr = 1;
+    let colors = { ink: [0, 0, 0] as RGB, accent: [45, 198, 92] as RGB, pop: [61, 107, 255] as RGB, light: [246, 248, 243] as RGB };
+
+    const readColors = () => {
+      const cs = getComputedStyle(canvas);
+      colors = {
+        ink: toRGB(cs.getPropertyValue('--ink').trim() || '#000'),
+        accent: toRGB(cs.getPropertyValue('--accent').trim() || '#2dc65c'),
+        pop: toRGB(cs.getPropertyValue('--pop-1').trim() || '#3d6bff'),
+        light: toRGB(cs.getPropertyValue('--on-ink').trim() || '#fff'),
+      };
+    };
+
+    const resize = () => {
+      const r = canvas.getBoundingClientRect();
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      W = r.width; H = r.height;
+      canvas.width = Math.round(W * dpr);
+      canvas.height = Math.round(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
+    // Proyección simple: cámara detrás del auto, un poco arriba.
+    const CAM_H = 1.25;
+    const FAR = 60;
+    const horizon = () => H * 0.42;
+    const project = (x: number, y: number, z: number) => {
+      const f = (Math.min(W, H * 1.9) * 0.62) / z;
+      return { sx: W / 2 + x * f, sy: horizon() + (CAM_H - y) * f, s: f };
+    };
+
+    // Ciudad de barras al horizonte (fija, se genera una vez)
+    const skyline = Array.from({ length: 46 }, (_, i) => ({
+      x: i / 45,
+      h: 0.25 + Math.abs(Math.sin(i * 1.7) * 0.55) + (i % 7 === 0 ? 0.35 : 0),
+      phase: Math.random() * Math.PI * 2,
+    }));
+
+    const kinds: Thing['kind'][] = ['search', 'chart', 'pin', 'window', 'eye', 'bubble'];
+    const things: Thing[] = [];
+    const spawn = (z = FAR) => {
+      const side = (Math.random() < 0.5 ? -1 : 1) as -1 | 1;
+      things.push({
+        kind: kinds[Math.floor(Math.random() * kinds.length)],
+        side,
+        x: side * (2.6 + Math.random() * 2.6),
+        y: 0.9 + Math.random() * 2.2,
+        z,
+        spin: Math.random() * Math.PI * 2,
+      });
+    };
+    for (let i = 0; i < 9; i++) spawn(6 + i * 6);
+
+    let t = 0;
+    let last = performance.now();
+    let running = false;
+    let raf = 0;
+
+    function roundRect(x: number, y: number, w: number, h: number, r: number) {
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, r);
+    }
+
+    function drawThing(o: Thing) {
+      const p = project(o.x, o.y, o.z);
+      const s = p.s * 0.9; // tamaño base en px
+      const fade = Math.min(1, (FAR - o.z) / 12) * Math.min(1, o.z / 2.5);
+      if (fade <= 0) return;
+      const { accent, pop, light } = colors;
+      ctx.save();
+      ctx.translate(p.sx, p.sy);
+      ctx.globalAlpha = fade;
+      ctx.shadowColor = rgba(accent, 0.8);
+      ctx.shadowBlur = 18;
+      ctx.lineWidth = Math.max(1, s * 0.035);
+      ctx.strokeStyle = rgba(accent, 0.95);
+      ctx.fillStyle = rgba(colors.ink, 0.55);
+
+      switch (o.kind) {
+        case 'search': {
+          const w = s * 1.9, h = s * 0.42;
+          roundRect(-w / 2, -h / 2, w, h, h / 2); ctx.fill(); ctx.stroke();
+          ctx.beginPath(); ctx.arc(-w / 2 + h * 0.55, 0, h * 0.2, 0, Math.PI * 2); ctx.stroke();
+          ctx.fillStyle = rgba(light, 0.75);
+          const typed = ((t * 0.6 + o.spin) % 1) * w * 0.55;
+          ctx.fillRect(-w / 2 + h, -h * 0.06, typed, h * 0.12);
+          break;
+        }
+        case 'chart': {
+          const w = s * 1.3, h = s * 0.95;
+          roundRect(-w / 2, -h / 2, w, h, s * 0.08); ctx.fill(); ctx.stroke();
+          ctx.shadowBlur = 10;
+          for (let i = 0; i < 5; i++) {
+            const grow = 0.3 + 0.6 * ((Math.sin(t * 2 + i * 0.8 + o.spin) + 1) / 2) * (0.4 + i * 0.15);
+            ctx.fillStyle = i === 4 ? rgba(accent) : rgba(pop, 0.85);
+            const bw = w * 0.11, bx = -w / 2 + w * 0.14 + i * w * 0.155, bh = h * 0.7 * grow;
+            ctx.fillRect(bx, h / 2 - h * 0.12 - bh, bw, bh);
+          }
+          break;
+        }
+        case 'pin': {
+          const r = s * 0.42, bob = Math.sin(t * 3 + o.spin) * s * 0.08;
+          ctx.translate(0, bob);
+          ctx.beginPath();
+          ctx.arc(0, -r * 0.4, r, Math.PI * 0.85, Math.PI * 0.15);
+          ctx.lineTo(0, r * 1.25);
+          ctx.closePath();
+          ctx.fillStyle = rgba(pop, 0.9); ctx.fill(); ctx.stroke();
+          ctx.beginPath(); ctx.arc(0, -r * 0.4, r * 0.38, 0, Math.PI * 2);
+          ctx.fillStyle = rgba(colors.ink, 0.9); ctx.fill();
+          break;
+        }
+        case 'window': {
+          const w = s * 1.7, h = s * 1.1;
+          roundRect(-w / 2, -h / 2, w, h, s * 0.1); ctx.fill(); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(-w / 2, -h / 2 + h * 0.18); ctx.lineTo(w / 2, -h / 2 + h * 0.18); ctx.stroke();
+          ctx.fillStyle = rgba(accent);
+          for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(-w / 2 + w * (0.08 + i * 0.06), -h / 2 + h * 0.09, s * 0.035, 0, Math.PI * 2); ctx.fill(); }
+          ctx.fillStyle = rgba(light, 0.7);
+          ctx.fillRect(-w * 0.38, -h * 0.12, w * 0.5, h * 0.09);
+          ctx.fillStyle = rgba(light, 0.35);
+          ctx.fillRect(-w * 0.38, h * 0.05, w * 0.7, h * 0.06);
+          ctx.fillRect(-w * 0.38, h * 0.17, w * 0.55, h * 0.06);
+          ctx.fillStyle = rgba(accent);
+          roundRect(-w * 0.38, h * 0.3, w * 0.28, h * 0.1, h * 0.05); ctx.fill();
+          break;
+        }
+        case 'eye': {
+          // Guiño a la marca: los ojos de Visible Studio también viajan
+          const w = s * 0.8, h = s * 0.42;
+          for (const dx of [-w * 0.6, w * 0.6]) {
+            ctx.save(); ctx.translate(dx, 0);
+            ctx.beginPath();
+            ctx.moveTo(-w / 2, 0);
+            ctx.quadraticCurveTo(0, -h, w / 2, 0);
+            ctx.quadraticCurveTo(0, h, -w / 2, 0);
+            ctx.fillStyle = rgba(light, 0.95); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.arc(Math.sin(t * 1.5 + o.spin) * w * 0.12, 0, h * 0.42, 0, Math.PI * 2);
+            ctx.fillStyle = rgba(accent); ctx.fill();
+            ctx.beginPath(); ctx.arc(Math.sin(t * 1.5 + o.spin) * w * 0.12, 0, h * 0.2, 0, Math.PI * 2);
+            ctx.fillStyle = rgba(colors.ink); ctx.fill();
+            ctx.restore();
+          }
+          break;
+        }
+        case 'bubble': {
+          const w = s * 1.1, h = s * 0.6;
+          roundRect(-w / 2, -h / 2, w, h, h * 0.3); ctx.fill(); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(-w * 0.25, h / 2); ctx.lineTo(-w * 0.35, h * 0.85); ctx.lineTo(-w * 0.05, h / 2); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = rgba(light, 0.85);
+          for (let i = 0; i < 3; i++) {
+            const a = 0.4 + 0.6 * ((Math.sin(t * 6 - i) + 1) / 2);
+            ctx.globalAlpha = fade * a;
+            ctx.beginPath(); ctx.arc(-w * 0.2 + i * w * 0.2, 0, h * 0.09, 0, Math.PI * 2); ctx.fill();
+          }
+          break;
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawCar() {
+      const { accent, light } = colors;
+      const cw = Math.min(W * 0.3, 300);
+      const ch = cw * 0.4;
+      const cx = W / 2 + Math.sin(t * 0.9) * W * 0.012;
+      const cy = H * 0.86 + Math.sin(t * 7) * 1.2;
+      ctx.save();
+      ctx.translate(cx, cy);
+
+      // Estelas de luz de las calaveras
+      for (const side of [-1, 1]) {
+        const g = ctx.createLinearGradient(0, 0, 0, H * 0.3);
+        g.addColorStop(0, rgba(accent, 0.55));
+        g.addColorStop(1, rgba(accent, 0));
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(side * cw * 0.36, -ch * 0.25);
+        ctx.lineTo(side * cw * 0.44, -ch * 0.25);
+        ctx.lineTo(side * cw * 0.9, H * 0.3);
+        ctx.lineTo(side * cw * 0.5, H * 0.3);
+        ctx.fill();
+      }
+      // Sombra
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.beginPath(); ctx.ellipse(0, ch * 0.1, cw * 0.58, ch * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+      // Llantas
+      ctx.fillStyle = '#060606';
+      ctx.beginPath(); ctx.roundRect(-cw * 0.5, -ch * 0.18, cw * 0.15, ch * 0.3, 4); ctx.fill();
+      ctx.beginPath(); ctx.roundRect(cw * 0.35, -ch * 0.18, cw * 0.15, ch * 0.3, 4); ctx.fill();
+      // Carrocería baja y ancha (vista trasera de un deportivo eléctrico)
+      const body = ctx.createLinearGradient(0, -ch * 0.75, 0, 0);
+      body.addColorStop(0, '#3a3f44');
+      body.addColorStop(0.5, '#1b1e21');
+      body.addColorStop(1, '#0b0c0d');
+      ctx.fillStyle = body;
+      ctx.strokeStyle = rgba(light, 0.22);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-cw * 0.52, -ch * 0.05);
+      ctx.lineTo(-cw * 0.53, -ch * 0.42);
+      ctx.quadraticCurveTo(-cw * 0.5, -ch * 0.6, -cw * 0.36, -ch * 0.62);
+      ctx.lineTo(cw * 0.36, -ch * 0.62);
+      ctx.quadraticCurveTo(cw * 0.5, -ch * 0.6, cw * 0.53, -ch * 0.42);
+      ctx.lineTo(cw * 0.52, -ch * 0.05);
+      ctx.quadraticCurveTo(0, ch * 0.05, -cw * 0.52, -ch * 0.05);
+      ctx.fill(); ctx.stroke();
+      // Cabina (más angosta, techo bajo)
+      ctx.beginPath();
+      ctx.moveTo(-cw * 0.33, -ch * 0.6);
+      ctx.lineTo(-cw * 0.24, -ch * 0.98);
+      ctx.quadraticCurveTo(0, -ch * 1.06, cw * 0.24, -ch * 0.98);
+      ctx.lineTo(cw * 0.33, -ch * 0.6);
+      ctx.closePath();
+      ctx.fillStyle = '#16191b';
+      ctx.fill(); ctx.stroke();
+      // Medallón con reflejo del acento
+      ctx.beginPath();
+      ctx.moveTo(-cw * 0.27, -ch * 0.66);
+      ctx.lineTo(-cw * 0.2, -ch * 0.92);
+      ctx.quadraticCurveTo(0, -ch * 0.98, cw * 0.2, -ch * 0.92);
+      ctx.lineTo(cw * 0.27, -ch * 0.66);
+      ctx.closePath();
+      const glass = ctx.createLinearGradient(-cw * 0.3, -ch, cw * 0.3, -ch * 0.6);
+      glass.addColorStop(0, rgba(accent, 0.35));
+      glass.addColorStop(1, rgba(colors.pop, 0.12));
+      ctx.fillStyle = glass;
+      ctx.fill();
+      // Alerón
+      ctx.fillStyle = '#0e1012';
+      ctx.beginPath(); ctx.roundRect(-cw * 0.42, -ch * 0.7, cw * 0.84, ch * 0.07, 3); ctx.fill(); ctx.stroke();
+      // Difusor
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.beginPath(); ctx.roundRect(-cw * 0.3, -ch * 0.16, cw * 0.6, ch * 0.1, 3); ctx.fill();
+      // Barra de luz trasera que pulsa
+      const pulse = 0.75 + Math.sin(t * 4) * 0.25;
+      ctx.shadowColor = rgba(accent, 1);
+      ctx.shadowBlur = 24 * pulse;
+      ctx.fillStyle = rgba(accent, pulse);
+      ctx.beginPath(); ctx.roundRect(-cw * 0.48, -ch * 0.4, cw * 0.96, ch * 0.07, ch * 0.035); ctx.fill();
+      ctx.restore();
+    }
+
+    function frame(now: number) {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      t += dt;
+      const speed = 14; // unidades de mundo por segundo
+      const { ink, accent, pop, light } = colors;
+      const hz = horizon();
+
+      // Cielo
+      const sky = ctx.createLinearGradient(0, 0, 0, hz);
+      sky.addColorStop(0, rgba(ink));
+      sky.addColorStop(1, `rgb(${ink.map((v, i) => Math.round(v * 0.6 + accent[i] * 0.12)).join(',')})`);
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, W, hz + 1);
+
+      // Resplandor del horizonte
+      const glow = ctx.createRadialGradient(W / 2, hz, 0, W / 2, hz, W * 0.55);
+      glow.addColorStop(0, rgba(accent, 0.45));
+      glow.addColorStop(1, rgba(accent, 0));
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, W, H);
+
+      // Ciudad de barras de analítica
+      const bw = W / skyline.length;
+      for (const b of skyline) {
+        const h = b.h * H * 0.18 * (0.85 + 0.15 * Math.sin(t * 1.2 + b.phase));
+        ctx.fillStyle = rgba(pop, 0.28);
+        ctx.fillRect(b.x * W - bw * 0.4, hz - h, bw * 0.8, h);
+        ctx.fillStyle = rgba(accent, 0.7);
+        ctx.fillRect(b.x * W - bw * 0.4, hz - h, bw * 0.8, 2);
+      }
+
+      // Suelo
+      ctx.fillStyle = `rgb(${ink.map((v) => Math.round(v * 0.8)).join(',')})`;
+      ctx.fillRect(0, hz, W, H - hz);
+
+      // Retícula que corre hacia la cámara
+      ctx.lineWidth = 1;
+      const spacing = 3;
+      const offset = (t * speed) % spacing;
+      for (let z = spacing - offset; z < FAR; z += spacing) {
+        const a = project(-40, 0, z), b = project(40, 0, z);
+        ctx.strokeStyle = rgba(pop, 0.35 * (1 - z / FAR));
+        ctx.beginPath(); ctx.moveTo(a.sx, a.sy); ctx.lineTo(b.sx, b.sy); ctx.stroke();
+      }
+      for (let x = -24; x <= 24; x += 2.4) {
+        const a = project(x, 0, 1), b = project(x, 0, FAR);
+        ctx.strokeStyle = rgba(pop, 0.18);
+        ctx.beginPath(); ctx.moveTo(a.sx, a.sy); ctx.lineTo(b.sx, b.sy); ctx.stroke();
+      }
+
+      // Carretera de luz
+      const roadW = 1.6;
+      const l1 = project(-roadW, 0, 0.8), l2 = project(-roadW, 0, FAR), r1 = project(roadW, 0, 0.8), r2 = project(roadW, 0, FAR);
+      const road = ctx.createLinearGradient(0, hz, 0, H);
+      road.addColorStop(0, rgba(accent, 0.05));
+      road.addColorStop(1, rgba(accent, 0.22));
+      ctx.fillStyle = road;
+      ctx.beginPath(); ctx.moveTo(l1.sx, l1.sy); ctx.lineTo(l2.sx, l2.sy); ctx.lineTo(r2.sx, r2.sy); ctx.lineTo(r1.sx, r1.sy); ctx.fill();
+      ctx.save();
+      ctx.shadowColor = rgba(accent);
+      ctx.shadowBlur = 16;
+      ctx.strokeStyle = rgba(accent);
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(l1.sx, l1.sy); ctx.lineTo(l2.sx, l2.sy); ctx.moveTo(r1.sx, r1.sy); ctx.lineTo(r2.sx, r2.sy); ctx.stroke();
+      // Líneas centrales
+      const dash = 4;
+      const dOff = (t * speed) % (dash * 2);
+      ctx.strokeStyle = rgba(light, 0.85);
+      for (let z = dash * 2 - dOff; z < FAR; z += dash * 2) {
+        const a = project(0, 0, Math.max(0.8, z)), b = project(0, 0, z + dash);
+        ctx.lineWidth = Math.max(1, a.s * 0.06);
+        ctx.beginPath(); ctx.moveTo(a.sx, a.sy); ctx.lineTo(b.sx, b.sy); ctx.stroke();
+      }
+      ctx.restore();
+
+      // Objetos flotantes (de lejos a cerca)
+      for (const o of things) o.z -= speed * dt;
+      for (let i = things.length - 1; i >= 0; i--) if (things[i].z < 0.8) { things.splice(i, 1); spawn(); }
+      things.sort((a, b) => b.z - a.z).forEach(drawThing);
+
+      // Líneas de velocidad
+      ctx.strokeStyle = rgba(light, 0.12);
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 14; i++) {
+        const seed = (i * 97.13) % 1;
+        const z = FAR - (((t * speed * 2.2) + i * 7.3) % FAR);
+        const x = (i % 2 ? 1 : -1) * (2 + seed * 7);
+        const a = project(x, 0.3 + (i % 5) * 0.5, Math.max(0.9, z));
+        const b = project(x, 0.3 + (i % 5) * 0.5, Math.max(0.9, z) + 3);
+        ctx.beginPath(); ctx.moveTo(a.sx, a.sy); ctx.lineTo(b.sx, b.sy); ctx.stroke();
+      }
+
+      drawCar();
+      if (running) raf = requestAnimationFrame(frame);
+    }
+
+    readColors();
+    resize();
+    // Primer cuadro siempre, aunque esté fuera de pantalla o con movimiento reducido
+    t = 1.3;
+    frame(performance.now());
+
+    new ResizeObserver(() => { resize(); if (!running) frame(performance.now()); }).observe(canvas);
+    new MutationObserver(() => { readColors(); if (!running) frame(performance.now()); })
+      .observe(document.documentElement, { attributes: true, attributeFilter: ['data-palette'] });
+
+    if (reduced) return;
+    new IntersectionObserver(([e]) => {
+      if (e.isIntersecting && !running) { running = true; last = performance.now(); raf = requestAnimationFrame(frame); }
+      else if (!e.isIntersecting && running) { running = false; cancelAnimationFrame(raf); }
+    }).observe(canvas);
+  }
+
+  document.addEventListener('astro:page-load', () => {
+    document.querySelectorAll<HTMLCanvasElement>('[data-journey]').forEach(startJourney);
+  });
+</script>
+
+<style>
+  .journey {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: 32px;
+    min-height: clamp(420px, 46vw, 560px);
+    display: grid;
+    place-items: center;
+    background: var(--ink);
+    color: var(--on-ink);
+  }
+  .journey__media {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -2;
+  }
+  /* Velo para que el texto siempre se lea sobre la animación */
+  .journey__shade {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(ellipse 60% 55% at 50% 38%, color-mix(in srgb, var(--ink) 72%, transparent), transparent 75%),
+      linear-gradient(180deg, color-mix(in srgb, var(--ink) 35%, transparent), transparent 40%);
+  }
+  .journey__content {
+    display: grid;
+    justify-items: center;
+    gap: 1.75rem;
+    text-align: center;
+    padding: clamp(2rem, 5vw, 3.5rem) clamp(1.5rem, 5vw, 4rem) clamp(9rem, 16vw, 12rem);
+  }
+  .journey__content p {
+    font-size: clamp(1.6rem, 3.2vw, 2.6rem);
+    font-weight: 750;
+    font-stretch: 84%;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    max-width: 24ch;
+    text-shadow: 0 2px 24px color-mix(in srgb, var(--ink) 80%, transparent);
+  }
+  .journey__content .btn { transition: translate 0.25s var(--ease-out), background-color 0.2s; }
+</style>

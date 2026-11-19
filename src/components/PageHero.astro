@@ -1,0 +1,42 @@
+---
+import Eyes from './Eyes.astro';
+interface Props {
+  h1: string;
+  lede?: string;
+  kicker?: string;
+}
+const { h1, lede, kicker } = Astro.props;
+---
+
+<section class="ph">
+  <div class="wrap ph__grid">
+    <div>
+      {kicker && <p class="ph__kicker muted">{kicker}</p>}
+      <h1 data-reveal="mask">{h1}</h1>
+      {lede && <p class="lede muted" data-reveal style="--i:1">{lede}</p>}
+      <slot />
+    </div>
+    <div class="ph__eyes" data-reveal="scale"><Eyes variant="hero" /></div>
+  </div>
+</section>
+
+<style>
+  .ph { padding-block: clamp(2.5rem, 6vw, 5rem) clamp(2.5rem, 5vw, 4rem); border-bottom: 1px solid var(--line); }
+  .ph__grid { display: grid; grid-template-columns: 1fr 220px; gap: 3rem; align-items: end; }
+  .ph h1 {
+    font-size: clamp(2.6rem, 6.4vw, 5.6rem);
+    font-weight: 800;
+    font-stretch: 76%;
+    letter-spacing: -0.04em;
+    line-height: 0.95;
+    margin-bottom: 1.5rem;
+    max-width: 16ch;
+  }
+  .ph__kicker { margin-bottom: 1rem; font-weight: 550; }
+  .ph .lede { max-width: 46ch; }
+  .ph :global(.btn) { margin-top: 2rem; }
+  @media (max-width: 760px) {
+    .ph__grid { grid-template-columns: 1fr; }
+    .ph__eyes { order: -1; width: 140px; }
+  }
+</style>

@@ -1,0 +1,88 @@
+---
+import { type Lang, t, route, contact } from '../i18n/ui';
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const year = new Date().getFullYear();
+const links = [
+  { href: route(lang, 'work'), label: t(lang, 'nav.work') },
+  { href: route(lang, 'services'), label: t(lang, 'nav.services') },
+  { href: route(lang, 'industries'), label: t(lang, 'nav.industries') },
+  { href: route(lang, 'about'), label: t(lang, 'nav.about') },
+  { href: route(lang, 'blog'), label: t(lang, 'nav.blog') },
+  { href: route(lang, 'contact'), label: t(lang, 'footer.contact') },
+];
+const social = [
+  ['Instagram', contact.social.instagram],
+  ['Facebook', contact.social.facebook],
+  ['TikTok', contact.social.tiktok],
+  ['Behance', contact.social.behance],
+  ['Dribbble', contact.social.dribbble],
+];
+---
+
+<footer class="footer">
+  <div class="wrap footer__grid">
+    <div class="footer__brand">
+      <p class="footer__word">visible studio</p>
+      <p class="muted">{t(lang, 'footer.tagline')}</p>
+    </div>
+
+    <div>
+      <h2 class="footer__h">{t(lang, 'footer.contact')}</h2>
+      <ul>
+        <li><a href={`mailto:${contact.email}`}>{contact.email}</a></li>
+        <li><a href={`tel:${contact.phone.replace(/\s/g, '')}`}>{contact.phone}</a></li>
+        <li><a href={`https://wa.me/${contact.whatsapp}`} rel="noopener">WhatsApp</a></li>
+        <li class="muted">{contact.city}</li>
+      </ul>
+    </div>
+
+    <div>
+      <h2 class="footer__h">{t(lang, 'footer.explore')}</h2>
+      <ul>{links.map((l) => <li><a href={l.href}>{l.label}</a></li>)}</ul>
+    </div>
+
+    <div>
+      <h2 class="footer__h">{t(lang, 'footer.follow')}</h2>
+      <ul>{social.map(([name, url]) => <li><a href={url} rel="noopener">{name}</a></li>)}</ul>
+    </div>
+  </div>
+
+  <div class="wrap footer__bottom muted">
+    <p>© {year} Visible Studio</p>
+    <a href={route(lang, 'privacy')}>{t(lang, 'footer.legal')}</a>
+  </div>
+</footer>
+
+<style>
+  .footer { border-top: 1px solid var(--line); padding-block: var(--space-l) 2rem; }
+  .footer__grid {
+    display: grid;
+    grid-template-columns: 2fr repeat(3, 1fr);
+    gap: 2.5rem;
+  }
+  .footer__word {
+    font-size: clamp(2.4rem, 5vw, 3.6rem);
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    font-stretch: 76%;
+    line-height: 1;
+    margin-bottom: 1rem;
+    color: var(--accent);
+  }
+  .footer__brand p:last-child { max-width: 36ch; }
+  .footer__h { font-size: 1rem; font-stretch: 100%; letter-spacing: 0; margin-bottom: 0.9rem; color: var(--muted); font-weight: 600; }
+  .footer ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.45rem; }
+  .footer a { text-decoration: none; }
+  .footer a:hover { color: var(--accent); }
+  .footer__bottom {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4rem;
+    font-size: var(--step--1);
+  }
+  @media (max-width: 860px) {
+    .footer__grid { grid-template-columns: 1fr 1fr; }
+    .footer__brand { grid-column: 1 / -1; }
+  }
+</style>

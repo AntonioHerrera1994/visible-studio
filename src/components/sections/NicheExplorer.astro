@@ -1,0 +1,275 @@
+---
+/**
+ * Sección "Nosotros" del inicio: estrategia para locales y nichos.
+ * A la derecha, un explorador interactivo: eliges giro + lugar y aparece una mini estrategia.
+ */
+import { type Lang, route } from '../../i18n/ui';
+import SearchBand from '../SearchBand.astro';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+
+const copy = {
+  es: {
+    h2: 'Estrategia creativa para locales y nichos',
+    p: 'No todos los sectores son iguales. Por eso en Visible Studio adaptamos cada estrategia creativa y de marketing digital a las necesidades de cada nicho y ubicación geográfica.',
+    points: [
+      ['Conociendo tu negocio', 'Encontramos a los clientes potenciales de tu región.'],
+      ['Estrategia enfocada', 'Estudiamos cada nicho y sus necesidades particulares.'],
+    ],
+    tryIt: 'Pruébalo',
+    nicheLabel: 'Tu giro',
+    placeLabel: 'Dónde vendes',
+    resultFor: 'Así empezaríamos con',
+    niches: [
+      ['salud', 'Salud', 'una clínica', ['Sitio bilingüe con precios y testimonios de pacientes', 'Agenda por WhatsApp con respuesta en minutos']],
+      ['inmo', 'Inmobiliario', 'una inmobiliaria', ['Fichas de propiedad con video y tour virtual', 'Campañas que filtran prospectos por presupuesto']],
+      ['resto', 'Restaurante', 'un restaurante', ['Menú visual y fotos que antojan', 'Reseñas y publicaciones constantes en redes']],
+      ['legal', 'Legal', 'un despacho', ['Contenido que responde dudas legales frecuentes', 'Formulario de consulta inicial que califica casos']],
+      ['shop', 'Tienda en línea', 'una tienda en línea', ['Fichas de producto optimizadas para buscar y comprar', 'Recuperación de carritos abandonados']],
+    ],
+    places: [
+      ['tij', 'Tijuana', 'en Tijuana', 'Ficha de Google Maps completa y SEO local por colonia'],
+      ['bc', 'Baja California', 'en Baja California', 'Páginas por ciudad: Tijuana, Rosarito, Ensenada y Mexicali'],
+      ['mx', 'Todo México', 'en todo México', 'SEO nacional y campañas segmentadas por estado'],
+      ['us', 'Estados Unidos', 'para clientes de EE. UU.', 'Contenido en inglés y anuncios en San Diego y Los Ángeles'],
+    ],
+    statement: 'Buscando la innovación digital mediante diseño creativo.',
+    band: 'Trabajamos diferentes aspectos de la comunicación para el crecimiento digital de cada proyecto.',
+    bandCta: 'Cuéntanos de tu proyecto',
+  },
+  en: {
+    h2: 'Creative strategy for local businesses and niches',
+    p: 'No two industries are alike. That is why Visible Studio adapts every creative and digital marketing strategy to the needs of each niche and location.',
+    points: [
+      ['Knowing your business', 'We find the potential customers in your region.'],
+      ['Focused strategy', 'We study each niche and its specific needs.'],
+    ],
+    tryIt: 'Try it',
+    nicheLabel: 'Your industry',
+    placeLabel: 'Where you sell',
+    resultFor: 'This is how we would start with',
+    niches: [
+      ['salud', 'Healthcare', 'a clinic', ['Bilingual site with prices and patient reviews', 'WhatsApp booking with replies in minutes']],
+      ['inmo', 'Real estate', 'a real estate firm', ['Listing pages with video and virtual tours', 'Campaigns that filter leads by budget']],
+      ['resto', 'Restaurant', 'a restaurant', ['A visual menu and craveable photos', 'Reviews and steady social posts']],
+      ['legal', 'Legal', 'a law firm', ['Content that answers common legal questions', 'An intake form that qualifies cases']],
+      ['shop', 'Online store', 'an online store', ['Product pages built to be found and bought', 'Abandoned cart recovery']],
+    ],
+    places: [
+      ['tij', 'Tijuana', 'in Tijuana', 'A complete Google Maps profile and neighborhood-level local SEO'],
+      ['bc', 'Baja California', 'in Baja California', 'City pages for Tijuana, Rosarito, Ensenada and Mexicali'],
+      ['mx', 'All of Mexico', 'across Mexico', 'National SEO and campaigns targeted by state'],
+      ['us', 'United States', 'for US customers', 'English content and ads in San Diego and Los Angeles'],
+    ],
+    statement: 'Pursuing digital innovation through creative design.',
+    band: 'We work on every part of communication that drives each project’s digital growth.',
+    bandCta: 'Tell us about your project',
+  },
+}[lang];
+
+const data = JSON.stringify({ niches: copy.niches, places: copy.places });
+const words = copy.statement.split(' ');
+---
+
+<section class="section section--white about" id="nosotros">
+  <div class="wrap about__grid">
+    <div class="about__text" data-stagger>
+      <h2 data-reveal="mask">{copy.h2}</h2>
+      <p class="lede muted" data-reveal>{copy.p}</p>
+      <dl class="about__points">
+        {copy.points.map(([h, p]) => (
+          <div data-reveal>
+            <dt>{h}</dt>
+            <dd class="muted">{p}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+
+    <form class="explorer" data-explorer data-options={data} data-reveal="scale" onsubmit="return false">
+      <div class="explorer__head">
+        <span class="radar" aria-hidden="true"><i></i><i></i><b></b></span>
+        <span class="explorer__try">{copy.tryIt}</span>
+      </div>
+
+      <fieldset>
+        <legend>{copy.nicheLabel}</legend>
+        <div class="chips">
+          {copy.niches.map(([id, label], i) => (
+            <label class="chip"><input type="radio" name="niche" value={id} checked={i === 0} /><span>{label}</span></label>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>{copy.placeLabel}</legend>
+        <div class="chips">
+          {copy.places.map(([id, label], i) => (
+            <label class="chip"><input type="radio" name="place" value={id} checked={i === 0} /><span>{label}</span></label>
+          ))}
+        </div>
+      </fieldset>
+
+      <output class="explorer__out" aria-live="polite" data-out>
+        <p class="explorer__for">{copy.resultFor} <strong data-who>{copy.niches[0][2]} {copy.places[0][2]}</strong></p>
+        <ul data-list>
+          <li>{copy.niches[0][3][0]}</li>
+          <li>{copy.niches[0][3][1]}</li>
+          <li>{copy.places[0][3]}</li>
+        </ul>
+      </output>
+    </form>
+  </div>
+
+  <p class="wrap statement" aria-label={copy.statement}>
+    {words.map((w, i) => <span aria-hidden="true" style={`--w:${i}; --n:${words.length}`}>{w} </span>)}
+  </p>
+
+  <div class="wrap">
+    <SearchBand lang={lang} text={copy.band} cta={copy.bandCta} href={route(lang, 'contact')} />
+  </div>
+</section>
+
+<script>
+  function initExplorer() {
+    document.querySelectorAll<HTMLFormElement>('[data-explorer]').forEach((form) => {
+      if (form.dataset.ready) return;
+      form.dataset.ready = '1';
+      const { niches, places } = JSON.parse(form.dataset.options!) as {
+        niches: [string, string, string, string[]][];
+        places: [string, string, string, string][];
+      };
+      const who = form.querySelector<HTMLElement>('[data-who]')!;
+      const list = form.querySelector<HTMLElement>('[data-list]')!;
+      const out = form.querySelector<HTMLElement>('[data-out]')!;
+      form.addEventListener('change', () => {
+        const fd = new FormData(form);
+        const n = niches.find((x) => x[0] === fd.get('niche'))!;
+        const p = places.find((x) => x[0] === fd.get('place'))!;
+        who.textContent = `${n[2]} ${p[2]}`;
+        list.replaceChildren(...[n[3][0], n[3][1], p[3]].map((t) => Object.assign(document.createElement('li'), { textContent: t })));
+        out.classList.remove('is-swap');
+        void out.offsetWidth; // reinicia la animación
+        out.classList.add('is-swap');
+      });
+    });
+  }
+  document.addEventListener('astro:page-load', initExplorer);
+</script>
+
+<style>
+  .about { padding-bottom: var(--space-l); }
+  .about__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(2.5rem, 6vw, 6rem);
+    align-items: center;
+  }
+  .about__text h2 { margin-bottom: 1.5rem; max-width: 14ch; }
+  .about__text .lede { max-width: 40ch; }
+  .about__points {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin: 2.75rem 0 0;
+  }
+  .about__points dt { font-weight: 700; font-size: var(--step-1); line-height: 1.2; margin-bottom: 0.4rem; }
+  .about__points dd { margin: 0; }
+
+  /* Explorador */
+  .explorer {
+    display: grid;
+    gap: 1.25rem;
+    padding: clamp(1.25rem, 3vw, 2rem);
+    border-radius: 28px;
+    border: 1.5px solid var(--line-strong);
+    background: color-mix(in srgb, var(--fg) 4%, var(--bg));
+  }
+  .explorer__head { display: flex; align-items: center; gap: 0.75rem; }
+  .explorer__try { font-weight: 650; color: var(--muted); }
+  .radar { position: relative; width: 2.25rem; height: 2.25rem; display: grid; place-items: center; }
+  .radar b { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+  .radar i {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    animation: ping 2.4s var(--ease-out) infinite;
+  }
+  .radar i + i { animation-delay: 1.2s; }
+  @keyframes ping { from { scale: 0.2; opacity: 1; } to { scale: 1.3; opacity: 0; } }
+
+  fieldset { border: 0; margin: 0; padding: 0; }
+  legend { font-size: var(--step--1); font-weight: 600; color: var(--muted); margin-bottom: 0.5rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .chip input { position: absolute; opacity: 0; pointer-events: none; }
+  .chip span {
+    display: inline-block;
+    padding: 0.5rem 0.95rem;
+    border-radius: var(--radius-pill);
+    border: 1.5px solid var(--line-strong);
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s, transform 0.3s var(--ease-spring);
+  }
+  .chip span:hover { border-color: var(--fg); }
+  .chip input:checked + span { background: var(--accent); border-color: var(--accent); color: var(--on-accent); transform: scale(1.04); }
+  .chip input:focus-visible + span { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  .explorer__out {
+    display: block;
+    padding: 1.25rem;
+    border-radius: 18px;
+    background: var(--surface);
+    color: var(--on-surface);
+  }
+  .explorer__for { margin-bottom: 0.75rem; }
+  .explorer__out ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.5rem; }
+  .explorer__out li { position: relative; padding-left: 1.5rem; font-weight: 600; line-height: 1.35; }
+  .explorer__out li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.45em;
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .explorer__out.is-swap li { animation: swap 0.5s var(--ease-out) both; }
+  .explorer__out.is-swap li:nth-child(2) { animation-delay: 60ms; }
+  .explorer__out.is-swap li:nth-child(3) { animation-delay: 120ms; }
+  @keyframes swap { from { opacity: 0; translate: 0 8px; } }
+
+  /* Frase que se ilumina palabra por palabra al hacer scroll */
+  .statement {
+    margin-block: clamp(4rem, 10vw, 8rem) clamp(2.5rem, 6vw, 4rem);
+    font-size: clamp(2rem, 5.2vw, 4.4rem);
+    font-weight: 780;
+    font-stretch: 80%;
+    letter-spacing: -0.035em;
+    line-height: 1.02;
+    max-width: 22ch;
+    text-wrap: balance;
+  }
+  @supports (animation-timeline: view()) {
+    .statement span {
+      color: color-mix(in srgb, var(--fg) 22%, var(--bg));
+      animation: lit linear both;
+      animation-timeline: view();
+      animation-range: cover calc(18% + var(--w) * 30% / var(--n)) cover calc(26% + var(--w) * 30% / var(--n));
+    }
+    .statement span:nth-last-child(-n + 2) { --lit: var(--accent-strong); }
+    @keyframes lit { to { color: var(--lit, var(--fg)); } }
+  }
+
+
+  @media (max-width: 960px) {
+    .about__grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 520px) {
+    .about__points { grid-template-columns: 1fr; gap: 1.25rem; }
+  }
+</style>
