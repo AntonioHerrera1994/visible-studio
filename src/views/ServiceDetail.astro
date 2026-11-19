@@ -4,6 +4,8 @@ import Base from '../layouts/Base.astro';
 import PageHero from '../components/PageHero.astro';
 import Faq from '../components/Faq.astro';
 import FinalCta from '../components/FinalCta.astro';
+import NorthAmericaMap from '../components/NorthAmericaMap.astro';
+import { serviceRegions } from '../data/regions';
 import { type Lang, route, t } from '../i18n/ui';
 import { alternatesFor } from '../lib/content';
 
@@ -14,6 +16,12 @@ const { Content } = await render(entry);
 const alternates = await alternatesFor('services', d.key, 'services');
 const others = (await getCollection('services', (s) => s.data.lang === lang && s.data.kind === 'core' && s.data.key !== d.key))
   .sort((a, b) => a.data.order - b.data.order);
+
+const regions = serviceRegions[d.key];
+const mapCopy = {
+  es: { title: `${d.h1} en México, Estados Unidos y Canadá`, lede: 'Cada mercado busca y decide distinto. Pasa el cursor por un país (o tócalo) para ver qué hacemos ahí.' },
+  en: { title: `${d.h1} in Mexico, the United States and Canada`, lede: 'Each market searches and decides differently. Hover over (or tap) a country to see what we do there.' },
+}[lang];
 
 const copy = {
   es: { deliverables: 'Qué incluye', process: 'Cómo lo hacemos', others: 'Otros servicios', cta: 'Agenda tu diagnóstico gratis' },
@@ -43,6 +51,8 @@ const schema = [{
       </div>
     </section>
   )}
+
+  {regions && <NorthAmericaMap lang={lang} regions={regions} title={mapCopy.title} lede={mapCopy.lede} />}
 
   {d.process.length > 0 && (
     <section class="section section--green">

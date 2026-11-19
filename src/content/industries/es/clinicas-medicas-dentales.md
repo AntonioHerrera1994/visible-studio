@@ -14,6 +14,10 @@ pains:
 faqs:
 - q: ¿Verifican la cédula profesional?
   a: Sí. Antes de trabajar con un profesional de la salud verificamos su cédula.
+- q: ¿Pueden anunciar servicios médicos en Google y Meta?
+  a: 'Sí. Ambas plataformas permiten anuncios de salud con reglas: nada de promesas de resultados ni fotos engañosas. En México, la publicidad de servicios de salud también está regulada por COFEPRIS, así que revisamos cada anuncio antes de publicarlo.'
+- q: ¿Cómo atraen pacientes de Estados Unidos y Canadá?
+  a: Con un sitio en inglés con precios en dólares, contenido que responde dudas de viaje y seguridad, SEO en inglés y campañas en ciudades cercanas a la frontera.
 ---
 
 

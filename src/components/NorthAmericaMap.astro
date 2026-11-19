@@ -1,0 +1,382 @@
+---
+/**
+ * Mapa interactivo de México, Estados Unidos y Canadá.
+ * Al pasar el cursor (o tocar) un país, el mapa hace zoom a ese país, dibuja las rutas desde Tijuana
+ * hacia sus ciudades principales y el panel muestra los beneficios para esa zona.
+ * El trazo del mapa se genera al compilar (src/lib/map.ts): no hay librerías de mapas en el navegador.
+ */
+import { northAmerica, W, H, type CountryCode } from '../lib/map';
+import { countryNames, type RegionSet } from '../data/regions';
+import type { Lang } from '../i18n/ui';
+
+interface Props {
+  lang: Lang;
+  regions: RegionSet;
+  title: string;
+  lede?: string;
+}
+const { lang, regions, title, lede } = Astro.props;
+const map = northAmerica();
+const order: CountryCode[] = ['mx', 'us', 'ca'];
+const byCode = Object.fromEntries(map.countries.map((c) => [c.code, c])) as Record<CountryCode, (typeof map.countries)[number]>;
+const ui = {
+  es: { hint: 'Pasa el cursor por un país o elige uno', all: 'Ver los tres países', from: 'Desde Tijuana hacia', source: 'Fuente' },
+  en: { hint: 'Hover over a country or pick one', all: 'See all three countries', from: 'From Tijuana to', source: 'Source' },
+}[lang];
+const uid = `na-${Math.random().toString(36).slice(2, 7)}`;
+---
+
+<section class="section na" data-na data-zooms={JSON.stringify(Object.fromEntries(order.map((c) => [c, byCode[c].zoom])))}>
+  <div class="wrap">
+    <div class="na__head">
+      <h2 data-reveal="mask">{title}</h2>
+      {lede && <p class="lede muted" data-reveal>{lede}</p>}
+    </div>
+
+    <div class="na__grid">
+      <div class="na__stage" data-reveal="scale">
+        <svg class="na__svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-labelledby={`${uid}-t`} data-na-svg>
+          <title id={`${uid}-t`}>{order.map((c) => countryNames[c][lang]).join(', ')}</title>
+          <defs>
+            <pattern id={`${uid}-dots`} width="9" height="9" patternUnits="userSpaceOnUse">
+              <circle cx="1.5" cy="1.5" r="1.1" class="na__dot" />
+            </pattern>
+          </defs>
+          <g class="na__zoom" data-na-zoom>
+            {map.context.map((d) => <path class="na__context" d={d} />)}
+            {order.map((c) => (
+              <path class="na__country" d={byCode[c].d} data-country={c} />
+            ))}
+            {order.map((c) => (
+              <path class="na__texture" d={byCode[c].d} fill={`url(#${uid}-dots)`} data-texture={c} />
+            ))}
+            {order.map((c) => (
+              <g class="na__routes" data-routes={c}>
+                {map.routes[c].map((r, i) => (
+                  <g style={`--r:${i}`}>
+                    <path class="na__arc" d={r.d} pathLength="1" />
+                    <circle class="na__city" cx={r.x} cy={r.y} r="5" />
+                    <text class="na__label" x={r.x + 9} y={r.y + 4}>{r.name}</text>
+                  </g>
+                ))}
+              </g>
+            ))}
+            <g class="na__origin">
+              <circle class="na__pulse" cx={map.origin.x} cy={map.origin.y} r="10" />
+              <circle class="na__pin" cx={map.origin.x} cy={map.origin.y} r="6" />
+              <text class="na__label na__label--origin" x={map.origin.x - 12} y={map.origin.y - 12} text-anchor="end">Tijuana</text>
+            </g>
+          </g>
+        </svg>
+        <button class="na__reset" type="button" data-na-reset hidden>{ui.all}</button>
+      </div>
+
+      <div class="na__side">
+        <div class="na__tabs" role="tablist" aria-label={title}>
+          {order.map((c) => (
+            <button class="na__tab" role="tab" type="button" aria-selected="false" aria-controls={`${uid}-${c}`} data-tab={c}>
+              {countryNames[c][lang]}
+            </button>
+          ))}
+        </div>
+
+        <div class="na__panels">
+          <div class="na__panel na__panel--intro" data-panel="intro">
+            <p class="na__hint">{ui.hint}</p>
+            <ul class="na__overview">
+              {order.map((c) => (
+                <li><strong>{countryNames[c][lang]}</strong><span class="muted">{regions[c][lang].title}</span></li>
+              ))}
+            </ul>
+          </div>
+          {order.map((c) => {
+            const r = regions[c][lang];
+            return (
+              <div class="na__panel" id={`${uid}-${c}`} role="tabpanel" data-panel={c} hidden>
+                <p class="na__country-name">{countryNames[c][lang]}</p>
+                <h3>{r.title}</h3>
+                <ul class="na__points">
+                  {r.points.map((p, i) => <li style={`--p:${i}`}>{p}</li>)}
+                </ul>
+                {r.stat && (
+                  <figure class="na__stat">
+                    <p class="na__stat-value">{r.stat.value}</p>
+                    <p>{r.stat.label}</p>
+                    <figcaption class="muted">
+                      {ui.source}: <a href={r.stat.url} target="_blank" rel="noopener">{r.stat.source}</a>
+                    </figcaption>
+                  </figure>
+                )}
+                <p class="na__from muted">{ui.from} {map.routes[c].map((x) => x.name).join(', ')}</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  type Zoom = { k: number; tx: number; ty: number };
+
+  function initMap(root: HTMLElement) {
+    if (root.dataset.ready) return;
+    root.dataset.ready = '1';
+    const zooms = JSON.parse(root.dataset.zooms!) as Record<string, Zoom>;
+    const svg = root.querySelector<SVGSVGElement>('[data-na-svg]')!;
+    const g = root.querySelector<SVGGElement>('[data-na-zoom]')!;
+    const reset = root.querySelector<HTMLButtonElement>('[data-na-reset]')!;
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>('[data-tab]')];
+    const panels = [...root.querySelectorAll<HTMLElement>('[data-panel]')];
+    let current = '';
+    let hoverT = 0;
+    // Tras un zoom, el mapa se mueve bajo el cursor. Para no encadenar zooms,
+    // el hover se ignora hasta que termine la animación y el cursor se mueva de verdad.
+    let lockUntil = 0;
+    let lockX = 0;
+    let lockY = 0;
+    let lastX = 0;
+    let lastY = 0;
+    svg.addEventListener('pointermove', (e) => { lastX = e.clientX; lastY = e.clientY; });
+    const hoverAllowed = () =>
+      performance.now() > lockUntil && Math.hypot(lastX - lockX, lastY - lockY) > 24;
+    const lock = () => { lockUntil = performance.now() + 1000; lockX = lastX; lockY = lastY; };
+
+    const activate = (code: string) => {
+      if (code === current) return;
+      current = code;
+      root.dataset.active = code || 'none';
+      const z = code ? zooms[code] : { k: 1, tx: 0, ty: 0 };
+      g.style.transform = `translate(${z.tx}px, ${z.ty}px) scale(${z.k})`;
+      svg.style.setProperty('--k', String(z.k));
+      root.querySelectorAll('[data-country], [data-texture], [data-routes]').forEach((el) => {
+        const c = (el as HTMLElement).dataset.country ?? (el as HTMLElement).dataset.texture ?? (el as HTMLElement).dataset.routes;
+        el.classList.toggle('is-on', c === code);
+      });
+      tabs.forEach((t) => t.setAttribute('aria-selected', String(t.dataset.tab === code)));
+      panels.forEach((p) => (p.hidden = p.dataset.panel !== (code || 'intro')));
+      reset.hidden = !code;
+    };
+
+    root.querySelectorAll<SVGPathElement>('[data-country]').forEach((path) => {
+      const tryHover = (e: PointerEvent) => {
+        if (e.pointerType !== 'mouse' || path.dataset.country === current || !hoverAllowed()) return;
+        clearTimeout(hoverT);
+        hoverT = window.setTimeout(() => { activate(path.dataset.country!); lock(); }, 90);
+      };
+      // pointermove además de pointerenter: si el cursor ya estaba encima al terminar el bloqueo, también cuenta
+      path.addEventListener('pointerenter', tryHover);
+      path.addEventListener('pointermove', tryHover);
+      path.addEventListener('pointerleave', () => clearTimeout(hoverT));
+      path.addEventListener('click', () => { activate(path.dataset.country!); lock(); });
+    });
+    tabs.forEach((t) => t.addEventListener('click', () => { activate(current === t.dataset.tab ? '' : t.dataset.tab!); lock(); }));
+    // Flechas del teclado entre pestañas
+    tabs.forEach((t, i) =>
+      t.addEventListener('keydown', (e) => {
+        if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+        const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+        next.focus();
+        activate(next.dataset.tab!);
+      }),
+    );
+    reset.addEventListener('click', () => { activate(''); lock(); });
+    root.addEventListener('keydown', (e) => { if (e.key === 'Escape') activate(''); });
+    activate('');
+  }
+
+  document.addEventListener('astro:page-load', () => {
+    document.querySelectorAll<HTMLElement>('[data-na]').forEach(initMap);
+  });
+</script>
+
+<style>
+  .na { overflow: hidden; }
+  .na__head { display: grid; gap: 1rem; margin-bottom: 2.5rem; }
+  .na__head .lede { max-width: 44ch; }
+
+  .na__grid {
+    display: grid;
+    grid-template-columns: 1.45fr 1fr;
+    gap: clamp(1.5rem, 4vw, 3.5rem);
+    align-items: center;
+  }
+
+  /* ---------- Mapa ---------- */
+  .na__stage {
+    position: relative;
+    border-radius: 28px;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 30% 70%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 55%),
+      color-mix(in srgb, var(--fg) 4%, var(--bg));
+    border: 1px solid var(--line);
+  }
+  .na__svg { --k: 1; display: block; width: 100%; height: auto; }
+  .na__zoom {
+    transform-box: view-box;
+    transform-origin: 0 0;
+    transition: transform 0.95s cubic-bezier(0.65, 0, 0.2, 1);
+  }
+  .na__context { fill: color-mix(in srgb, var(--fg) 7%, transparent); stroke: none; }
+  .na__country {
+    fill: color-mix(in srgb, var(--fg) 22%, var(--bg));
+    stroke: var(--bg);
+    stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+    cursor: pointer;
+    transition: fill 0.4s, opacity 0.5s;
+  }
+  .na__country:hover { fill: color-mix(in srgb, var(--accent) 55%, var(--bg)); }
+  .na__country.is-on { fill: var(--accent); }
+  .na[data-active='mx'] .na__country:not(.is-on),
+  .na[data-active='us'] .na__country:not(.is-on),
+  .na[data-active='ca'] .na__country:not(.is-on) { opacity: 0.35; }
+  .na__texture { pointer-events: none; opacity: 0; transition: opacity 0.6s; }
+  .na__texture.is-on { opacity: 0.35; }
+  .na__dot { fill: var(--on-accent); }
+
+  .na__routes { opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+  .na__routes.is-on { opacity: 1; }
+  .na__arc {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 2;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    vector-effect: non-scaling-stroke;
+  }
+  .na__routes.is-on .na__arc {
+    animation: draw-route 1.1s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+    animation-delay: calc(0.55s + var(--r) * 0.18s);
+  }
+  @keyframes draw-route { to { stroke-dashoffset: 0; } }
+  .na__city {
+    fill: var(--bg);
+    stroke: var(--fg);
+    stroke-width: 2.5;
+    vector-effect: non-scaling-stroke;
+    transform-box: fill-box;
+    transform-origin: center;
+    scale: 0;
+    r: calc(5px / var(--k));
+  }
+  .na__routes.is-on .na__city { animation: pop 0.5s var(--ease-spring) forwards; animation-delay: calc(1.3s + var(--r) * 0.18s); }
+  @keyframes pop { to { scale: 1; } }
+  .na__label {
+    fill: var(--fg);
+    font-family: var(--font);
+    font-weight: 700;
+    font-size: calc(15px / var(--k));
+    paint-order: stroke;
+    stroke: var(--bg);
+    stroke-width: calc(4px / var(--k));
+    stroke-linejoin: round;
+  }
+  .na__routes .na__label { opacity: 0; }
+  .na__routes.is-on .na__label { animation: fade 0.4s forwards; animation-delay: calc(1.4s + var(--r) * 0.18s); }
+  @keyframes fade { to { opacity: 1; } }
+
+  .na__origin { pointer-events: none; }
+  .na__pin { fill: var(--fg); stroke: var(--bg); stroke-width: 2; vector-effect: non-scaling-stroke; r: calc(6px / var(--k)); }
+  .na__pulse {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 2;
+    vector-effect: non-scaling-stroke;
+    transform-box: fill-box;
+    transform-origin: center;
+    r: calc(10px / var(--k));
+    animation: na-pulse 2.2s var(--ease-out) infinite;
+  }
+  @keyframes na-pulse { from { scale: 0.6; opacity: 1; } to { scale: 2.4; opacity: 0; } }
+
+  .na__reset {
+    position: absolute;
+    left: 1rem;
+    bottom: 1rem;
+    padding: 0.55rem 1rem;
+    border-radius: var(--radius-pill);
+    border: 1.5px solid var(--line-strong);
+    background: var(--bg);
+    color: var(--fg);
+    font: inherit;
+    font-size: var(--step--1);
+    font-weight: 650;
+    cursor: pointer;
+  }
+  .na__reset:hover { border-color: var(--fg); }
+
+  /* ---------- Panel ---------- */
+  .na__tabs { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .na__tab {
+    padding: 0.55rem 1.05rem;
+    border-radius: var(--radius-pill);
+    border: 1.5px solid var(--line-strong);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 650;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+  }
+  .na__tab:hover { border-color: var(--fg); }
+  .na__tab[aria-selected='true'] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+  .na__panels { min-height: 22rem; }
+  .na__panel { animation: panel-in 0.55s var(--ease-out); }
+  @keyframes panel-in { from { opacity: 0; translate: 0 14px; } }
+  .na__hint { font-size: var(--step-1); font-weight: 650; margin-bottom: 1.25rem; }
+  .na__overview { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+  .na__overview li { display: grid; gap: 0.15rem; padding-block: 1rem; border-bottom: 1px solid var(--line); }
+  .na__country-name { color: var(--accent); font-weight: 700; margin-bottom: 0.4rem; }
+  .na__panel h3 { font-size: var(--step-2); margin-bottom: 1.25rem; }
+  .na__points { list-style: none; margin: 0 0 1.5rem; padding: 0; display: grid; gap: 0.65rem; }
+  .na__points li {
+    position: relative;
+    padding-left: 1.6rem;
+    font-weight: 600;
+    line-height: 1.35;
+    animation: panel-in 0.5s var(--ease-out) both;
+    animation-delay: calc(0.15s + var(--p) * 0.08s);
+  }
+  .na__points li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.42em;
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .na__stat {
+    margin: 0 0 1.25rem;
+    padding: 1.1rem 1.25rem;
+    border-radius: 18px;
+    background: var(--surface);
+    color: var(--on-surface);
+    --muted: var(--on-surface-muted);
+    animation: panel-in 0.55s var(--ease-out) both;
+    animation-delay: 0.4s;
+  }
+  .na__stat-value { font-size: clamp(1.8rem, 3.4vw, 2.6rem); font-weight: 800; font-stretch: 76%; letter-spacing: -0.03em; line-height: 1; margin-bottom: 0.4rem; }
+  .na__stat p:not(.na__stat-value) { line-height: 1.4; font-size: 0.95rem; }
+  .na__stat figcaption { margin-top: 0.6rem; font-size: 0.78rem; }
+  .na__stat a { color: inherit; }
+  .na__from { font-size: var(--step--1); }
+
+  @media (max-width: 900px) {
+    .na__grid { grid-template-columns: 1fr; }
+    .na__panels { min-height: 0; }
+    .na__label { font-size: calc(22px / var(--k)); stroke-width: calc(5px / var(--k)); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .na__zoom { transition: none; }
+    .na__arc { stroke-dashoffset: 0; }
+    .na__city { scale: 1; }
+    .na__routes .na__label { opacity: 1; }
+  }
+</style>

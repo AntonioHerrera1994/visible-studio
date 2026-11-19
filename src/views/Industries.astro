@@ -4,6 +4,9 @@ import Base from '../layouts/Base.astro';
 import PageHero from '../components/PageHero.astro';
 import Faq from '../components/Faq.astro';
 import FinalCta from '../components/FinalCta.astro';
+import NorthAmericaMap from '../components/NorthAmericaMap.astro';
+import ProjectCard from '../components/ProjectCard.astro';
+import { industryRegions, industryFacts, industryServices } from '../data/regions';
 import { type Lang, route } from '../i18n/ui';
 import { alternatesFor } from '../lib/content';
 
@@ -13,22 +16,43 @@ const { lang, entry } = Astro.props;
 const list = (await getCollection('industries', (i) => i.data.lang === lang)).sort((a, b) => a.data.order - b.data.order);
 const base = route(lang, 'industries');
 
+/** Industria de esta página → industria de los proyectos del portafolio */
+const projectIndustry: Record<string, string> = { salud: 'salud', inmobiliario: 'bienes-raices', restaurantes: 'restaurante' };
+
 const copy = {
   es: {
     title: 'Marketing por industria', description: 'Estrategias de diseño y marketing digital por industria: salud, inmobiliario, restaurantes y más.',
     h1: 'Cada industria se busca distinto', lede: 'Conocemos cómo buscan y deciden los clientes de cada sector. Elige el tuyo.',
     pains: 'Lo que escuchamos de negocios como el tuyo', cta: 'Agenda tu diagnóstico gratis',
+    mapTitle: 'Tus clientes están en tres países', mapLede: 'Pasa el cursor por un país (o tócalo) para ver cómo llegamos a tus clientes ahí.',
+    facts: 'Datos que importan', source: 'Fuente', help: 'Cómo te ayudamos', projects: 'Proyectos en esta industria', allProjects: 'Ver el portafolio',
+    keyFact: 'Dato clave',
   },
   en: {
     title: 'Marketing by industry', description: 'Design and digital marketing strategies by industry: healthcare, real estate, restaurants and more.',
     h1: 'Every industry gets searched differently', lede: 'We know how customers in each sector search and decide. Pick yours.',
     pains: 'What we hear from businesses like yours', cta: 'Book your free check',
+    mapTitle: 'Your customers live in three countries', mapLede: 'Hover over (or tap) a country to see how we reach your customers there.',
+    facts: 'Numbers that matter', source: 'Source', help: 'How we help', projects: 'Projects in this industry', allProjects: 'See the portfolio',
+    keyFact: 'Key fact',
   },
 }[lang];
 
 const alternates = entry
   ? await alternatesFor('industries', entry.data.key, 'industries')
   : { es: '/es/industrias/', en: '/en/industries/' };
+
+const key = entry?.data.key ?? '';
+const regions = industryRegions[key];
+const facts = industryFacts[key]?.[lang] ?? [];
+const services = entry
+  ? (await getCollection('services', (s) => s.data.lang === lang && s.data.kind === 'core'))
+      .filter((s) => (industryServices[key] ?? []).includes(s.data.key))
+      .sort((a, b) => (industryServices[key] ?? []).indexOf(a.data.key) - (industryServices[key] ?? []).indexOf(b.data.key))
+  : [];
+const projects = entry
+  ? (await getCollection('projects', (p) => p.data.industry === projectIndustry[key])).sort((a, b) => a.data.order - b.data.order).slice(0, 3)
+  : [];
 ---
 
 {entry ? (
@@ -36,14 +60,68 @@ const alternates = entry
     <PageHero h1={entry.data.h1} lede={entry.data.lede}>
       <a class="btn btn--primary" href={route(lang, 'audit')} data-eyes-attract>{copy.cta}</a>
     </PageHero>
+
     {entry.data.pains.length > 0 && (
       <section class="section section--white">
         <div class="wrap">
-          <h2 class="pains__h">{copy.pains}</h2>
-          <ul class="pains">{entry.data.pains.map((p) => <li>“{p}”</li>)}</ul>
+          <h2 class="pains__h" data-reveal="mask">{copy.pains}</h2>
+          <ul class="pains" data-stagger>{entry.data.pains.map((p) => <li data-reveal>“{p}”</li>)}</ul>
         </div>
       </section>
     )}
+
+    {regions && <NorthAmericaMap lang={lang} regions={regions} title={copy.mapTitle} lede={copy.mapLede} />}
+
+    {facts.length > 0 && (
+      <section class="section section--white">
+        <div class="wrap">
+          <h2 class="facts__h" data-reveal="mask">{copy.facts}</h2>
+          <div class="facts" data-stagger>
+            {facts.map((f) => (
+              <figure class="fact" data-reveal>
+                <p class="fact__value">{f.value}</p>
+                <p class="fact__label">{f.label}</p>
+                <figcaption class="muted">{copy.source}: <a href={f.url} target="_blank" rel="noopener">{f.source}</a></figcaption>
+              </figure>
+            ))}
+          </div>
+        </div>
+      </section>
+    )}
+
+    {services.length > 0 && (
+      <section class="section section--paper">
+        <div class="wrap">
+          <h2 class="help__h" data-reveal="mask">{copy.help}</h2>
+          <ul class="help" data-stagger>
+            {services.map((s, i) => (
+              <li data-reveal>
+                <a href={`${route(lang, 'services')}${s.data.slug}/`} data-eyes-attract>
+                  <span class="help__n">{i + 1}</span>
+                  <strong>{s.data.h1}</strong>
+                  <span class="help__text">{s.data.lede}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+    )}
+
+    {projects.length > 0 && (
+      <section class="section section--white">
+        <div class="wrap">
+          <div class="head-row">
+            <h2 class="help__h" data-reveal="mask">{copy.projects}</h2>
+            <a class="btn btn--dark" href={`${route(lang, 'work')}?industria=${projectIndustry[key]}`}>{copy.allProjects}</a>
+          </div>
+          <div class="projects" data-stagger>
+            {projects.map((p) => <div data-reveal><ProjectCard project={p} lang={lang} /></div>)}
+          </div>
+        </div>
+      </section>
+    )}
+
     <Faq lang={lang} items={entry.data.faqs} />
     <FinalCta lang={lang} />
   </Base>
@@ -51,15 +129,22 @@ const alternates = entry
   <Base lang={lang} title={copy.title} description={copy.description} alternates={alternates}>
     <PageHero h1={copy.h1} lede={copy.lede} />
     <section class="section section--white">
-      <ul class="wrap ind">
-        {list.map((i) => (
-          <li>
-            <a href={`${base}${i.data.slug}/`} data-eyes-attract>
-              <h2>{i.data.h1}</h2>
-              <p class="muted">{i.data.lede}</p>
-            </a>
-          </li>
-        ))}
+      <ul class="wrap ind" data-stagger>
+        {list.map((i) => {
+          const fact = industryFacts[i.data.key]?.[lang]?.[0];
+          return (
+            <li data-reveal>
+              <a href={`${base}${i.data.slug}/`} data-eyes-attract>
+                <h2>{i.data.h1}</h2>
+                <span class="ind__text">
+                  <span class="muted">{i.data.lede}</span>
+                  {fact && <span class="ind__fact"><strong>{fact.value}</strong> {fact.label}</span>}
+                </span>
+                <svg class="ind__arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+              </a>
+            </li>
+          );
+        })}
       </ul>
     </section>
     <FinalCta lang={lang} />
@@ -73,14 +158,55 @@ const alternates = entry
     padding: 1.75rem; border-radius: var(--radius-card); background: var(--surface); color: var(--on-surface);
     font-size: var(--step-1); font-weight: 650; line-height: 1.3;
   }
+
+  .facts__h, .help__h { font-size: var(--step-3); margin-bottom: 2.5rem; }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 2rem; }
+  .fact { margin: 0; padding-top: 1.25rem; border-top: 3px solid var(--fg); display: grid; gap: 0.6rem; align-content: start; }
+  .fact__value { font-size: clamp(2.2rem, 4.4vw, 3.4rem); font-weight: 800; font-stretch: 75%; letter-spacing: -0.035em; line-height: 1; color: var(--accent-strong); }
+  .fact__label { line-height: 1.45; }
+  .fact figcaption { font-size: 0.8rem; }
+  .fact a { color: inherit; }
+
+  .help { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+  .help a {
+    display: grid;
+    gap: 0.6rem;
+    height: 100%;
+    padding: 1.75rem;
+    border-radius: var(--radius-card);
+    background: var(--card);
+    text-decoration: none;
+    transition: transform 0.35s var(--ease-out), box-shadow 0.35s;
+  }
+  .help a:hover { transform: translateY(-4px); box-shadow: 0 18px 40px -20px rgb(0 0 0 / 0.35); }
+  .help__n { font-size: 2.4rem; font-weight: 800; font-stretch: 75%; line-height: 1; color: var(--accent-strong); }
+  .help strong { font-size: var(--step-1); line-height: 1.2; }
+  .help__text { color: var(--muted); line-height: 1.45; }
+
+  .head-row { display: flex; align-items: end; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 2.5rem; }
+  .head-row .help__h { margin-bottom: 0; }
+  .projects { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+
   .ind { list-style: none; padding: 0; border-top: 1px solid var(--line); }
   .ind a {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: baseline;
+    display: grid; grid-template-columns: 1fr 1fr auto; gap: 2rem; align-items: center;
     padding-block: 2rem; border-bottom: 1px solid var(--line); text-decoration: none;
+    transition: padding 0.4s var(--ease-out);
   }
+  .ind__text { display: grid; gap: 0.75rem; line-height: 1.5; }
+  .ind__fact { font-size: 0.92rem; padding-left: 0.9rem; border-left: 3px solid var(--accent); }
+  .ind__fact strong { color: var(--accent-strong); }
+  .ind__arrow { width: 1.6rem; opacity: 0; translate: -10px 0; transition: opacity 0.3s, translate 0.4s var(--ease-out); }
+  .ind a:hover { padding-left: 1rem; }
   .ind a:hover h2 { color: var(--accent-strong); }
+  .ind a:hover .ind__arrow { opacity: 1; translate: 0 0; }
+
+  @media (max-width: 900px) {
+    .help, .projects { grid-template-columns: 1fr; }
+  }
   @media (max-width: 760px) {
     .pains, .ind a { grid-template-columns: 1fr; }
     .ind a { gap: 0.75rem; }
+    .ind__arrow { display: none; }
   }
 </style>
