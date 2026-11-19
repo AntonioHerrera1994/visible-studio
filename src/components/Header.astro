@@ -2,7 +2,7 @@
 import { getCollection } from 'astro:content';
 import Eyes from './Eyes.astro';
 import PaletteSwitcher from './PaletteSwitcher.astro';
-import { BLOG_ENABLED, type Lang, t, route, languages } from '../i18n/ui';
+import { BLOG_ENABLED, type Lang, t, route, languages, contact } from '../i18n/ui';
 
 interface Props {
   lang: Lang;
@@ -83,9 +83,8 @@ const isServices = path.startsWith(svcBase);
 
     <div class="header__actions">
       <PaletteSwitcher lang={lang} />
-      <a class="lang" href={alternates[other]} hreflang={other} lang={other}>
+      <a class="lang" href={alternates[other]} hreflang={other} lang={other} aria-label={languages[other]}>
         <span aria-hidden="true">{other.toUpperCase()}</span>
-        <span class="visually-hidden">{languages[other]}</span>
       </a>
       <a class="btn btn--primary header__cta" href={route(lang, 'audit')} data-eyes-attract>
         {t(lang, 'nav.cta')}
@@ -96,33 +95,63 @@ const isServices = path.startsWith(svcBase);
     </div>
   </div>
 
-  <div id="mobile-menu" popover class="mobile-menu">
-    <div class="mobile-menu__top">
-      <span class="mobile-menu__eyes"><Eyes variant="mini" /></span>
-      <button class="mobile-menu__close" popovertarget="mobile-menu" popovertargetaction="hide">
-        {t(lang, 'nav.close')}
-      </button>
-    </div>
-    <ul class="mobile-menu__nav">
-      <li style="--i:0"><a href={nav[0].href}>{nav[0].label}</a></li>
-      <li style="--i:1">
-        <details class="m-acc">
-          <summary>{t(lang, 'nav.services')}</summary>
-          <ul>
-            {services.map((s) => <li><a href={`${svcBase}${s.data.slug}/`}>{s.data.h1}</a></li>)}
-            <li><a href={svcBase}>{dd.all}</a></li>
-          </ul>
-        </details>
-      </li>
-      {nav.slice(1).map((item, i) => (
-        <li style={`--i:${i + 2}`}><a href={item.href}>{item.label}</a></li>
-      ))}
-    </ul>
-    <div class="mobile-menu__bottom">
-      <PaletteSwitcher lang={lang} variant="inline" />
-      <div class="mobile-menu__actions">
-        <a class="btn btn--dark" href={route(lang, 'audit')}>{t(lang, 'nav.cta')}</a>
-        <a class="mobile-menu__lang" href={alternates[other]} hreflang={other}>{languages[other]}</a>
+  <!--
+    Menú móvil tipo "bottom sheet": sube desde abajo, deja ver la página difuminada detrás
+    y pone las acciones principales en la zona del pulgar. Se cierra con el botón, tocando fuera,
+    con Esc o deslizando la hoja hacia abajo.
+  -->
+  <div id="mobile-menu" popover class="mm" data-mm>
+    <div class="mm__sheet" data-mm-sheet>
+      <div class="mm__grab" data-mm-grab aria-hidden="true"><span></span></div>
+
+      <div class="mm__top">
+        <span class="mm__eyes"><Eyes variant="mini" /></span>
+        <div class="mm__lang" role="group" aria-label={lang === 'es' ? 'Idioma' : 'Language'}>
+          <a href={alternates.es} hreflang="es" lang="es" aria-current={lang === 'es' ? 'true' : undefined}>ES</a>
+          <a href={alternates.en} hreflang="en" lang="en" aria-current={lang === 'en' ? 'true' : undefined}>EN</a>
+        </div>
+      </div>
+
+      <nav class="mm__nav" aria-label={lang === 'es' ? 'Menú móvil' : 'Mobile menu'}>
+        <ul>
+          <li style="--i:0">
+            <a href={nav[0].href} aria-current={path.startsWith(nav[0].href) ? 'page' : undefined}>
+              {nav[0].label}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" /></svg>
+            </a>
+          </li>
+          <li style="--i:1">
+            <details class="mm__acc" open={isServices}>
+              <summary aria-current={isServices ? 'page' : undefined}>
+                {t(lang, 'nav.services')}<span class="mm__plus" aria-hidden="true"></span>
+              </summary>
+              <ul class="mm__chips">
+                {services.map((s) => (
+                  <li><a href={`${svcBase}${s.data.slug}/`} aria-current={path.startsWith(`${svcBase}${s.data.slug}/`) ? 'page' : undefined}>{s.data.h1}</a></li>
+                ))}
+                <li><a class="mm__chip-all" href={svcBase}>{dd.all}</a></li>
+              </ul>
+            </details>
+          </li>
+          {nav.slice(1).map((item, i) => (
+            <li style={`--i:${i + 2}`}>
+              <a href={item.href} aria-current={path.startsWith(item.href) ? 'page' : undefined}>
+                {item.label}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" /></svg>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      <div class="mm__palette"><PaletteSwitcher lang={lang} variant="inline" /></div>
+
+      <div class="mm__bar">
+        <button class="mm__close" popovertarget="mobile-menu" popovertargetaction="hide" aria-label={t(lang, 'nav.close')}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+        <a class="mm__cta" href={route(lang, 'audit')}>{t(lang, 'nav.cta')}</a>
+        <a class="mm__wa" href={`https://wa.me/${contact.whatsapp}`} rel="noopener" aria-label="WhatsApp">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M16 3a13 13 0 0 0-11.2 19.6L3 29l6.6-1.7A13 13 0 1 0 16 3Zm0 23.6a10.6 10.6 0 0 1-5.4-1.5l-.4-.2-3.9 1 1-3.8-.2-.4A10.6 10.6 0 1 1 16 26.6Zm5.8-7.9c-.3-.2-1.9-.9-2.2-1s-.5-.2-.7.2-.8 1-1 1.2-.4.2-.7 0a8.7 8.7 0 0 1-4.3-3.7c-.3-.6.3-.5.9-1.7a.6.6 0 0 0 0-.5l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6a1.2 1.2 0 0 0-.9.4 3.7 3.7 0 0 0-1.1 2.7 6.4 6.4 0 0 0 1.3 3.4 14.7 14.7 0 0 0 5.6 5c2.1.9 2.9 1 4 .8a3.4 3.4 0 0 0 2.2-1.6 2.8 2.8 0 0 0 .2-1.6c-.1-.1-.3-.2-.6-.3Z"/></svg>
+        </a>
       </div>
     </div>
   </div>
@@ -186,10 +215,51 @@ const isServices = path.startsWith(svcBase);
       if (isOpen && pTrigger) placeFallback(pPanel, pTrigger, 'right');
     });
 
-    // Al tocar un enlace del menú móvil, se cierra el menú.
-    document.querySelectorAll<HTMLAnchorElement>('#mobile-menu a').forEach((a) =>
-      a.addEventListener('click', () => document.getElementById('mobile-menu')?.hidePopover()),
-    );
+    initSheet();
+  }
+
+  /** Hoja del menú móvil: se cierra al tocar un enlace, tocando fuera o deslizándola hacia abajo. */
+  function initSheet() {
+    const menu = document.getElementById('mobile-menu');
+    const sheet = menu?.querySelector<HTMLElement>('[data-mm-sheet]');
+    if (!menu || !sheet || menu.dataset.ready) return;
+    menu.dataset.ready = '1';
+
+    menu.querySelectorAll<HTMLAnchorElement>('a').forEach((a) => a.addEventListener('click', () => menu.hidePopover()));
+    // Tocar el fondo difuminado (fuera de la hoja) cierra el menú
+    menu.addEventListener('click', (e) => { if (e.target === menu) menu.hidePopover(); });
+    // Bloquea el scroll de la página mientras el menú está abierto
+    menu.addEventListener('toggle', (e) => {
+      document.documentElement.style.overflow = (e as ToggleEvent).newState === 'open' ? 'hidden' : '';
+      sheet.style.translate = '';
+    });
+
+    // Deslizar hacia abajo para cerrar (desde la manija o la parte superior)
+    let startY = 0, dy = 0, dragging = false;
+    const zone = sheet.querySelector<HTMLElement>('.mm__top')!;
+    const grab = sheet.querySelector<HTMLElement>('[data-mm-grab]')!;
+    for (const el of [grab, zone]) {
+      el.addEventListener('pointerdown', (e) => {
+        if ((e.target as Element).closest('a, button')) return;
+        dragging = true; startY = e.clientY; dy = 0;
+        sheet.classList.add('is-dragging');
+        el.setPointerCapture(e.pointerId);
+      });
+      el.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        dy = Math.max(0, e.clientY - startY);
+        sheet.style.translate = `0 ${dy}px`;
+      });
+      const end = () => {
+        if (!dragging) return;
+        dragging = false;
+        sheet.classList.remove('is-dragging');
+        if (dy > 110) menu.hidePopover();
+        else sheet.style.translate = '';
+      };
+      el.addEventListener('pointerup', end);
+      el.addEventListener('pointercancel', end);
+    }
   }
   document.addEventListener('astro:page-load', initNav);
 </script>
@@ -350,79 +420,194 @@ const isServices = path.startsWith(svcBase);
   }
   .menu-btn span { width: 18px; height: 2px; background: var(--fg); border-radius: 2px; }
 
-  /* ---- Menú móvil ---- */
-  .mobile-menu {
+  /* ---- Menú móvil: bottom sheet ---- */
+  .mm {
     inset: 0;
     width: 100%;
     height: 100dvh;
     max-width: none;
     max-height: none;
     margin: 0;
+    padding: 0;
     border: 0;
-    padding: 1.25rem var(--gutter) 2rem;
+    background: transparent;
+    display: none;
+    align-items: flex-end;
+    overflow: hidden;
+  }
+  .mm:popover-open { display: flex; }
+  .mm::backdrop {
+    background: rgb(0 0 0 / 0.45);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    opacity: 0;
+    transition: opacity 0.35s, display 0.45s allow-discrete, overlay 0.45s allow-discrete;
+  }
+  .mm:popover-open::backdrop { opacity: 1; }
+  @starting-style { .mm:popover-open::backdrop { opacity: 0; } }
+
+  .mm__sheet {
+    position: relative;
+    width: 100%;
+    max-height: calc(100dvh - 0.75rem);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 0.5rem var(--gutter) 0;
+    border-radius: 28px 28px 0 0;
     background: var(--accent);
     color: var(--on-accent);
     --eye-brow: var(--on-accent);
-    flex-direction: column;
-    gap: 1.25rem;
+    box-shadow: 0 -20px 60px -10px rgb(0 0 0 / 0.4);
     overflow-y: auto;
-    clip-path: circle(0% at calc(100% - 2.5rem) 2.5rem);
-    transition: clip-path 0.55s var(--ease-out), display 0.55s allow-discrete, overlay 0.55s allow-discrete;
+    overscroll-behavior: contain;
+    transform: translateY(100%);
+    transition: transform 0.55s cubic-bezier(0.32, 0.72, 0, 1), translate 0.3s var(--ease-out);
   }
-  .mobile-menu:popover-open { display: flex; clip-path: circle(150% at calc(100% - 2.5rem) 2.5rem); }
-  @starting-style { .mobile-menu:popover-open { clip-path: circle(0% at calc(100% - 2.5rem) 2.5rem); } }
-  .mobile-menu__top { display: flex; justify-content: space-between; align-items: center; }
-  .mobile-menu__eyes { width: 4rem; }
-  .mobile-menu__close {
-    background: var(--ink);
-    color: var(--on-ink);
-    border: 0;
-    padding: 0.7rem 1.2rem;
+  .mm:popover-open .mm__sheet { transform: none; }
+  @starting-style { .mm:popover-open .mm__sheet { transform: translateY(100%); } }
+  .mm__sheet.is-dragging { transition: none; }
+
+  .mm__grab { display: grid; place-items: center; padding: 0.35rem 0 0.15rem; cursor: grab; touch-action: none; }
+  .mm__grab span { width: 44px; height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--on-accent) 35%, transparent); }
+
+  .mm__top { display: flex; align-items: center; justify-content: space-between; touch-action: none; }
+  .mm__eyes { width: 3.6rem; }
+  .mm__lang {
+    display: inline-flex;
+    padding: 4px;
     border-radius: var(--radius-pill);
-    font: inherit;
-    font-weight: 650;
-    cursor: pointer;
+    background: color-mix(in srgb, var(--on-accent) 12%, transparent);
   }
-  .mobile-menu__nav { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.1rem; }
-  .mobile-menu__nav > li {
+  .mm__lang a {
+    min-width: 3rem;
+    padding: 0.5rem 0.85rem;
+    border-radius: var(--radius-pill);
+    text-align: center;
+    text-decoration: none;
+    font-weight: 750;
+    font-size: 0.95rem;
+  }
+  .mm__lang a[aria-current] { background: var(--ink); color: var(--on-ink); }
+
+  /* Navegación grande, pegada a la zona del pulgar */
+  .mm__nav { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; }
+  .mm__nav > ul { list-style: none; margin: 0; padding: 0; }
+  .mm__nav > ul > li {
+    border-top: 1px solid color-mix(in srgb, var(--on-accent) 18%, transparent);
     opacity: 0;
-    translate: 0 16px;
-    transition: opacity 0.4s, translate 0.5s var(--ease-out);
-    transition-delay: calc(var(--i) * 50ms + 120ms);
+    translate: 0 18px;
+    transition: opacity 0.4s, translate 0.55s var(--ease-out);
+    transition-delay: calc(var(--i) * 45ms + 160ms);
   }
-  .mobile-menu:popover-open .mobile-menu__nav > li { opacity: 1; translate: 0 0; }
-  @starting-style { .mobile-menu:popover-open .mobile-menu__nav > li { opacity: 0; translate: 0 16px; } }
-  .mobile-menu__nav > li > a,
-  .m-acc summary {
+  .mm:popover-open .mm__nav > ul > li { opacity: 1; translate: 0 0; }
+  @starting-style { .mm:popover-open .mm__nav > ul > li { opacity: 0; translate: 0 18px; } }
+  .mm__nav > ul > li > a,
+  .mm__acc summary {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    font-size: clamp(2rem, 9vw, 2.8rem);
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 3.75rem;
+    font-size: clamp(1.9rem, 8.5vw, 2.6rem);
     font-weight: 780;
     font-stretch: 80%;
     letter-spacing: -0.03em;
+    line-height: 1.05;
     text-decoration: none;
-    line-height: 1.2;
     cursor: pointer;
     list-style: none;
   }
-  .m-acc summary::-webkit-details-marker { display: none; }
-  .m-acc summary::after { content: '+'; font-weight: 500; transition: rotate 0.3s var(--ease-out); }
-  .m-acc[open] summary::after { rotate: 45deg; }
-  .m-acc::details-content { block-size: 0; overflow: hidden; transition: block-size 0.35s var(--ease-out), content-visibility 0.35s allow-discrete; }
-  .m-acc[open]::details-content { block-size: auto; }
-  .m-acc ul { list-style: none; margin: 0.25rem 0 0.75rem; padding: 0 0 0 0.25rem; display: grid; gap: 0.35rem; }
-  .m-acc ul a { font-size: var(--step-1); font-weight: 650; text-decoration: none; }
-  .mobile-menu__bottom { margin-top: auto; display: grid; gap: 1.25rem; }
-  .mobile-menu__actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
-  .mobile-menu__lang { font-weight: 650; }
+  .mm__nav svg { width: 1.5rem; flex: none; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; opacity: 0.5; transition: translate 0.3s var(--ease-out), opacity 0.3s; }
+  .mm__nav a:active svg { translate: 4px 0; opacity: 1; }
+  .mm__nav [aria-current='page'] { text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 6px; }
+  .mm__acc summary::-webkit-details-marker { display: none; }
+  .mm__plus { position: relative; width: 1.5rem; height: 1.5rem; flex: none; }
+  .mm__plus::before, .mm__plus::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 1.1rem;
+    height: 2.5px;
+    border-radius: 2px;
+    background: currentColor;
+    translate: -50% -50%;
+    transition: rotate 0.35s var(--ease-out);
+  }
+  .mm__plus::after { rotate: 90deg; }
+  .mm__acc[open] .mm__plus::after { rotate: 0deg; }
+  .mm__acc::details-content { block-size: 0; overflow: hidden; transition: block-size 0.4s var(--ease-out), content-visibility 0.4s allow-discrete; }
+  .mm__acc[open]::details-content { block-size: auto; }
+  /* Servicios como chips */
+  .mm__chips { list-style: none; margin: 0; padding: 0 0 1rem; display: flex; flex-wrap: wrap; gap: 0.45rem; }
+  .mm__chips a {
+    display: inline-block;
+    padding: 0.6rem 0.95rem;
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, var(--on-accent) 10%, transparent);
+    border: 1.5px solid color-mix(in srgb, var(--on-accent) 22%, transparent);
+    font-weight: 650;
+    font-size: 0.95rem;
+    text-decoration: none;
+  }
+  .mm__chips a[aria-current='page'] { background: var(--ink); color: var(--on-ink); border-color: var(--ink); text-decoration: none; }
+  .mm__chips .mm__chip-all { background: transparent; border-style: dashed; }
+
+  .mm__palette { padding-top: 0.25rem; }
+
+  /* Barra inferior: lo más usado, al alcance del pulgar */
+  .mm__bar {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0 calc(var(--gutter) * -1);
+    padding: 0.85rem var(--gutter) calc(0.85rem + env(safe-area-inset-bottom));
+    background: var(--accent);
+    border-top: 1px solid color-mix(in srgb, var(--on-accent) 18%, transparent);
+  }
+  .mm__close, .mm__wa {
+    flex: none;
+    width: 3.25rem;
+    height: 3.25rem;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    border: 1.5px solid color-mix(in srgb, var(--on-accent) 35%, transparent);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+  }
+  .mm__close svg { width: 1.35rem; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
+  .mm__wa svg { width: 1.5rem; }
+  .mm__cta {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    height: 3.25rem;
+    padding: 0 1rem;
+    border-radius: var(--radius-pill);
+    background: var(--ink);
+    color: var(--on-ink);
+    font-weight: 700;
+    text-decoration: none;
+    text-align: center;
+    line-height: 1.1;
+  }
 
   @media (max-width: 1080px) {
-    .nav, .lang, .header__cta { display: none; }
+    .nav, .header__cta { display: none; }
+    .lang { width: 2.75rem; height: 2.75rem; padding: 0; display: grid; place-items: center; }
     .menu-btn { display: inline-flex; }
     .header__inner { justify-content: space-between; }
   }
   @media (max-width: 560px) {
     .dd { grid-template-columns: 1fr; grid-template-areas: 'list' 'card' 'foot'; }
+    .header__actions { gap: 0.4rem; }
+  }
+  @media (max-width: 380px) {
+    .logo__word { display: none; }
   }
 </style>
