@@ -23,7 +23,13 @@ function apply(id: PaletteId) {
   });
 }
 
+function markSeen() {
+  document.documentElement.dataset.paletteSeen = '';
+  try { localStorage.setItem('vs-palette-seen', '1'); } catch {}
+}
+
 function choose(id: PaletteId, origin: { x: number; y: number }) {
+  markSeen();
   if (id === document.documentElement.dataset.palette) return;
   try { localStorage.setItem(KEY, id); } catch {}
 
@@ -59,7 +65,13 @@ document.addEventListener('click', (e) => {
 
 document.addEventListener('astro:page-load', init);
 // Al navegar, el nuevo documento llega sin el atributo: lo reponemos antes de pintar.
+// Abrir el selector también cuenta como "ya lo vio": se apaga el pulso.
+document.addEventListener('click', (e) => {
+  if ((e.target as Element).closest('[data-palette-trigger]')) markSeen();
+});
+
 document.addEventListener('astro:after-swap', () => {
   document.documentElement.dataset.palette = currentPalette();
+  try { if (localStorage.getItem('vs-palette-seen')) document.documentElement.dataset.paletteSeen = ''; } catch {}
   document.documentElement.classList.add('js');
 });

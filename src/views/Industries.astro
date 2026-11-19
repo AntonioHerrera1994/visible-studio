@@ -37,7 +37,7 @@ const alternates = entry
       <a class="btn btn--primary" href={route(lang, 'audit')} data-eyes-attract>{copy.cta}</a>
     </PageHero>
     {entry.data.pains.length > 0 && (
-      <section class="section">
+      <section class="section section--white">
         <div class="wrap">
           <h2 class="pains__h">{copy.pains}</h2>
           <ul class="pains">{entry.data.pains.map((p) => <li>“{p}”</li>)}</ul>
@@ -50,7 +50,7 @@ const alternates = entry
 ) : (
   <Base lang={lang} title={copy.title} description={copy.description} alternates={alternates}>
     <PageHero h1={copy.h1} lede={copy.lede} />
-    <section class="section">
+    <section class="section section--white">
       <ul class="wrap ind">
         {list.map((i) => (
           <li>
@@ -78,7 +78,7 @@ const alternates = entry
     display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: baseline;
     padding-block: 2rem; border-bottom: 1px solid var(--line); text-decoration: none;
   }
-  .ind a:hover h2 { color: var(--accent); }
+  .ind a:hover h2 { color: var(--accent-strong); }
   @media (max-width: 760px) {
     .pains, .ind a { grid-template-columns: 1fr; }
     .ind a { gap: 0.75rem; }

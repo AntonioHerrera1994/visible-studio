@@ -21,12 +21,15 @@ export default defineConfig({
   },
   redirects: {
     // Redirecciones 301 de URLs viejas que cambian de ruta en el rediseño.
-    // Agrega aquí las del blog cuando decidan qué artículos se quedan.
-    '/es/blogs/': '/es/blog/',
-    '/en/blogs/': '/en/blog/',
+    // El blog está apagado (BLOG_ENABLED en src/i18n/ui.ts): las URLs viejas van al inicio.
+    // Cuando lo enciendan, cambien el destino a '/es/blog/' y '/en/blog/'.
+    '/es/blogs/': '/es/',
+    '/en/blogs/': '/en/',
   },
   integrations: [
     sitemap({
+      // Mientras el blog esté apagado, no aparece en el sitemap.
+      filter: (page) => !/\/(blog|blogs)\//.test(page),
       i18n: { defaultLocale: 'es', locales: { es: 'es-MX', en: 'en-US' } },
     }),
   ],

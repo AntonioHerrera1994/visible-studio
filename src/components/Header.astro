@@ -2,7 +2,7 @@
 import { getCollection } from 'astro:content';
 import Eyes from './Eyes.astro';
 import PaletteSwitcher from './PaletteSwitcher.astro';
-import { type Lang, t, route, languages } from '../i18n/ui';
+import { BLOG_ENABLED, type Lang, t, route, languages } from '../i18n/ui';
 
 interface Props {
   lang: Lang;
@@ -20,7 +20,7 @@ const nav = [
   { href: route(lang, 'work'), label: t(lang, 'nav.work') },
   { href: route(lang, 'industries'), label: t(lang, 'nav.industries') },
   { href: route(lang, 'about'), label: t(lang, 'nav.about') },
-  { href: route(lang, 'blog'), label: t(lang, 'nav.blog') },
+  ...(BLOG_ENABLED ? [{ href: route(lang, 'blog'), label: t(lang, 'nav.blog') }] : []),
 ];
 
 const dd = {
@@ -181,7 +181,9 @@ const isServices = path.startsWith(svcBase);
     const pTrigger = document.querySelector<HTMLElement>('[data-palette-trigger]');
     const pPanel = document.querySelector<HTMLElement>('[data-palette-panel]');
     pPanel?.addEventListener('toggle', (e) => {
-      if ((e as ToggleEvent).newState === 'open' && pTrigger) placeFallback(pPanel, pTrigger, 'right');
+      const isOpen = (e as ToggleEvent).newState === 'open';
+      pTrigger?.setAttribute('aria-expanded', String(isOpen));
+      if (isOpen && pTrigger) placeFallback(pPanel, pTrigger, 'right');
     });
 
     // Al tocar un enlace del menú móvil, se cierra el menú.
@@ -416,7 +418,7 @@ const isServices = path.startsWith(svcBase);
   .mobile-menu__lang { font-weight: 650; }
 
   @media (max-width: 1080px) {
-    .nav, .lang, .header__cta, .header__actions :global(.ps) { display: none; }
+    .nav, .lang, .header__cta { display: none; }
     .menu-btn { display: inline-flex; }
     .header__inner { justify-content: space-between; }
   }

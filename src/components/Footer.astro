@@ -1,5 +1,5 @@
 ---
-import { type Lang, t, route, contact } from '../i18n/ui';
+import { BLOG_ENABLED, type Lang, t, route, contact } from '../i18n/ui';
 interface Props { lang: Lang }
 const { lang } = Astro.props;
 const year = new Date().getFullYear();
@@ -8,7 +8,7 @@ const links = [
   { href: route(lang, 'services'), label: t(lang, 'nav.services') },
   { href: route(lang, 'industries'), label: t(lang, 'nav.industries') },
   { href: route(lang, 'about'), label: t(lang, 'nav.about') },
-  { href: route(lang, 'blog'), label: t(lang, 'nav.blog') },
+  ...(BLOG_ENABLED ? [{ href: route(lang, 'blog'), label: t(lang, 'nav.blog') }] : []),
   { href: route(lang, 'contact'), label: t(lang, 'footer.contact') },
 ];
 const social = [

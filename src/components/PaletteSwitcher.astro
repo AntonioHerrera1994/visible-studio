@@ -17,8 +17,10 @@ const id = `palette-${variant}`;
 
 {variant === 'popover' ? (
   <div class="ps">
-    <button class="ps__trigger" popovertarget={id} aria-label={label} data-palette-trigger>
-      <span class="ps__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+    <button class="ps__trigger" popovertarget={id} aria-label={label} title={label} data-palette-trigger>
+      <span class="ps__wheel" aria-hidden="true"><i></i></span>
+      <span class="ps__label">{lang === 'es' ? 'Colores' : 'Colors'}</span>
+      <span class="ps__ping" aria-hidden="true" data-palette-ping></span>
     </button>
     <div id={id} popover class="ps__panel" data-palette-panel>
       <p class="ps__title">{title}</p>
@@ -56,24 +58,72 @@ const id = `palette-${variant}`;
 )}
 
 <style>
+  /* Botón del navbar: rueda con los colores de las 3 paletas */
   .ps__trigger {
     anchor-name: --palette;
-    width: 2.75rem;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     height: 2.75rem;
-    border-radius: 50%;
+    padding: 0 1rem 0 0.4rem;
+    border-radius: var(--radius-pill);
     border: 1.5px solid var(--line-strong);
-    background: transparent;
+    background: color-mix(in srgb, var(--fg) 5%, transparent);
+    color: var(--fg);
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 650;
     cursor: pointer;
-    display: grid;
-    place-items: center;
-    transition: border-color 0.2s, transform 0.3s var(--ease-spring);
+    transition: border-color 0.2s, background-color 0.2s;
   }
-  .ps__trigger:hover { border-color: var(--fg); transform: rotate(-20deg); }
-  .ps__dots { display: grid; grid-template-columns: repeat(3, 7px); gap: 3px; }
-  .ps__dots i { width: 7px; height: 7px; border-radius: 50%; }
-  .ps__dots i:nth-child(1) { background: var(--fg); }
-  .ps__dots i:nth-child(2) { background: var(--accent); }
-  .ps__dots i:nth-child(3) { background: var(--surface); outline: 1px solid var(--line-strong); }
+  .ps__trigger:hover,
+  .ps__trigger[aria-expanded='true'] { border-color: var(--fg); background: var(--hover); }
+  .ps__wheel {
+    position: relative;
+    width: 1.9rem;
+    height: 1.9rem;
+    border-radius: 50%;
+    background: conic-gradient(from 200deg, #2dc65c 0 33.3%, #ff3d7f 0 66.6%, #ffb703 0);
+    box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px color-mix(in srgb, var(--fg) 25%, transparent);
+    transition: rotate 0.8s var(--ease-spring);
+  }
+  /* Centro con el color de la paleta activa */
+  .ps__wheel i {
+    position: absolute;
+    inset: 30%;
+    border-radius: 50%;
+    background: var(--bg);
+    box-shadow: inset 0 0 0 2.5px var(--accent);
+    transition: background-color 0.4s;
+  }
+  .ps__trigger:hover .ps__wheel,
+  .ps__trigger[aria-expanded='true'] .ps__wheel { rotate: 240deg; }
+  /* Pulso que invita a probarlo hasta el primer uso */
+  .ps__ping {
+    position: absolute;
+    left: 0.4rem;
+    top: 50%;
+    width: 1.9rem;
+    height: 1.9rem;
+    margin-top: -0.95rem;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    pointer-events: none;
+    animation: ps-ping 2.2s var(--ease-out) infinite;
+  }
+  :global(html[data-palette-seen]) .ps__ping { display: none; }
+  @keyframes ps-ping {
+    0% { scale: 1; opacity: 0.9; }
+    70%, 100% { scale: 1.9; opacity: 0; }
+  }
+  @media (max-width: 1080px) {
+    .ps__trigger { padding: 0 0.4rem; width: 2.75rem; justify-content: center; }
+    .ps__label { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ps__ping { animation: none; opacity: 0.6; }
+  }
 
   .ps__panel {
     position-anchor: --palette;

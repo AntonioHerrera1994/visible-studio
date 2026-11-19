@@ -2,8 +2,11 @@
 import { getCollection } from 'astro:content';
 import View from '../../../views/Blog.astro';
 import { pathsFor } from '../../../lib/content';
+import { BLOG_ENABLED } from '../../../i18n/ui';
 
 export async function getStaticPaths() {
+  // Mientras el blog esté apagado no se publica ningún artículo.
+  if (!BLOG_ENABLED) return [];
   return pathsFor(await getCollection('blog'), 'es');
 }
 const { entry } = Astro.props;

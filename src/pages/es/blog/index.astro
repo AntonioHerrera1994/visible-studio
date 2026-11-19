@@ -1,5 +1,9 @@
 ---
 import View from '../../../views/Blog.astro';
+import { BLOG_ENABLED } from '../../../i18n/ui';
+
+// Mientras el blog esté apagado, esta página manda al inicio.
+if (!BLOG_ENABLED) return Astro.redirect('/es/');
 ---
 
 <View lang="es" />

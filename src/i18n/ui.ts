@@ -1,3 +1,6 @@
+/** El blog está apagado mientras no haya entradas. Cámbialo a true para volver a mostrarlo. */
+export const BLOG_ENABLED = false;
+
 export const languages = { es: 'Español', en: 'English' } as const;
 export type Lang = keyof typeof languages;
 export const defaultLang: Lang = 'es';
